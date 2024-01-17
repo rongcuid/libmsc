@@ -106,15 +106,14 @@ typedef enum msca_result {
 void msca_mknull(size_t length, struct ArrowArray *array);
 
 /**
- * @brief Create an untyped primitive array.
+ * @brief Create an untyped primitive array, taking ownership of buffers.
  *
  * @param length Logical length of array
  * @param validity Validity buffer (bitmap)
  * @param data Data buffer
- * @param validity_releaser Release callback. If specified, takes ownership of
+ * @param validity_releaser Release callback, nullable
  * validity buffer
- * @param data_releaser Releasese callback. If specified, takes ownership of
- * data buffer
+ * @param data_releaser Releasese callback, nullable
  * @param array Output array
  * @return msca_result_t
  */
