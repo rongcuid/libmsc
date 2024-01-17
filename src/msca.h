@@ -4,7 +4,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <sys/_types/_null.h>
 
 // The following is the canonical definition of arrow C data interface
 // structures
