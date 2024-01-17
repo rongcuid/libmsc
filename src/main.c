@@ -1,7 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
 
-#define MSCA_IMPLEMENTATION
 #include "msca.h"
 
 void print_arr(const struct ArrowArray *arr) {
@@ -12,12 +11,20 @@ void print_arr(const struct ArrowArray *arr) {
 }
 
 int main(int argc, char **argv) {
-  printf("Create null array!\n");
+  printf("Create null array.\n");
   struct ArrowArray nullarr;
   msca_mknull(1000, &nullarr);
   assert(nullarr.release != NULL);
   print_arr(&nullarr);
   nullarr.release(&nullarr);
   assert(nullarr.release == NULL);
+  printf("Create integer array.\n");
+  int *ints = calloc(1000, sizeof(*ints));
+  struct ArrowArray intarr;
+  msca_mkprim(1000, NULL, ints, NULL, &msca_malloc_releaser, &intarr);
+  assert(intarr.release != NULL);
+  print_arr(&intarr);
+  intarr.release(&intarr);
+  assert(intarr.release == NULL);
   return 0;
 }

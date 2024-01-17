@@ -1,2 +1,4 @@
+If:
+    PathMatch: src/msca.h
 CompileFlags:
-    Add: [-DMSCA_IMPLEMENTATION]
+    Add: -DMSCA_IMPLEMENTATION

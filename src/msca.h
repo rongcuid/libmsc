@@ -70,21 +70,71 @@ struct ArrowArrayStream {
 
 #endif // ARROW_C_STREAM_INTERFACE
 
+/**
+ * @brief Callback structure for releasing a buffer
+ */
+typedef struct msca_releaser {
+  void (*release)(struct msca_releaser *releaser, void *data);
+  void *context;
+} msca_releaser_t;
+
+/**
+ * @brief A releaser which uses releases data allocated by `malloc()`
+ */
+extern msca_releaser_t msca_malloc_releaser;
+
+/**
+ * @brief A buffer release callback which calls `free(buf)`
+ *
+ * @param context
+ * @param buf
+ */
+void msca_buf_release_free(void *context, void *buf);
+
 typedef enum msca_result {
   MSCA_OK = 0,
   MSCA_ERR,
   MSCA_NOMEM,
-} msca_result;
+} msca_result_t;
 
+/**
+ * @brief Create a null array. No allocations. Error is impossible.
+ *
+ * @param length Logical length of array
+ * @param array Output array
+ */
 void msca_mknull(size_t length, struct ArrowArray *array);
 
-msca_result msca_mkprim(void *data, size_t length,
-                        void (*data_release)(void *data),
-                        struct ArrowArray *array);
+/**
+ * @brief Create an untyped primitive array.
+ *
+ * @param length Logical length of array
+ * @param validity Validity buffer (bitmap)
+ * @param data Data buffer
+ * @param validity_releaser Release callback. If specified, takes ownership of
+ * validity buffer
+ * @param data_releaser Releasese callback. If specified, takes ownership of
+ * data buffer
+ * @param array Output array
+ * @return msca_result_t
+ */
+msca_result_t msca_mkprim(size_t length, uint8_t *validity, void *data,
+                          msca_releaser_t *validity_releaser,
+                          msca_releaser_t *data_releaser,
+                          struct ArrowArray *array);
 
 #endif // MSCA_H__
 
 #ifdef MSCA_IMPLEMENTATION
+
+static void msca_malloc_releaser_release(msca_releaser_t *releaser,
+                                         void *data) {
+  free(data);
+}
+
+msca_releaser_t msca_malloc_releaser = {
+    .release = msca_malloc_releaser_release,
+};
 
 static void msca_release_null(struct ArrowArray *arr) { arr->release = NULL; }
 
@@ -96,38 +146,49 @@ void msca_mknull(size_t length, struct ArrowArray *array) {
 }
 
 typedef struct msca_prim_priv {
-  void (*data_release)(void *data);
+  msca_releaser_t *data_releaser;
+  msca_releaser_t *nulls_releaser;
   const void *buffers[2];
 } msca_prim_priv_t;
 
 static void msca_release_prim(struct ArrowArray *arr) {
   msca_prim_priv_t *priv = (msca_prim_priv_t *)arr->private_data;
-  if (priv->data_release) {
-    priv->data_release((void *)arr->buffers[1]);
+  if (priv->nulls_releaser) {
+    priv->nulls_releaser->release(priv->nulls_releaser,
+                                  (void *)arr->buffers[0]);
+  }
+  if (priv->data_releaser) {
+    priv->data_releaser->release(priv->data_releaser, (void *)arr->buffers[1]);
   }
   free(priv);
   arr->release = NULL;
 }
 
-msca_result msca_mkprim(void *data, size_t length,
-                        void (*data_release)(void *data),
-                        struct ArrowArray *array) {
-  msca_result result = MSCA_ERR;
+msca_result_t msca_mkprim(size_t length, uint8_t *nulls, void *data,
+                          msca_releaser_t *nulls_releaser,
+                          msca_releaser_t *data_releaser,
+                          struct ArrowArray *array) {
+  msca_result_t result = MSCA_ERR;
+  // Private data
   msca_prim_priv_t *priv = (msca_prim_priv_t *)malloc(sizeof(*priv));
   if (!priv) {
     result = MSCA_NOMEM;
     goto finally;
   }
   *priv = (msca_prim_priv_t){0};
-  priv->data_release = data_release;
+  priv->data_releaser = data_releaser;
+  priv->nulls_releaser = nulls_releaser;
+  priv->buffers[0] = nulls;
   priv->buffers[1] = data;
-  *array = (struct ArrowArray){0};
-  array->length = length;
-  array->null_count = 0;
-  array->n_buffers = 2;
-  array->buffers = priv->buffers;
-  array->release = msca_release_prim;
-  array->private_data = priv;
+  // Populate array
+  *array = (struct ArrowArray){
+      .length = length,
+      .null_count = nulls == NULL ? 0 : -1,
+      .n_buffers = 2,
+      .buffers = priv->buffers,
+      .release = msca_release_prim,
+      .private_data = priv,
+  };
   goto ok;
   // Exit point
 err_after_priv:
