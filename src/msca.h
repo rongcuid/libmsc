@@ -71,16 +71,14 @@ struct ArrowArrayStream {
 
 /**
  * @brief Callback structure for releasing a buffer
+ * @param context Arbitrary data for the release callback
+ * @param data Data to be released
  */
-typedef struct msca_releaser {
-  void (*release)(struct msca_releaser *releaser, void *data);
-  void *context;
-} msca_releaser_t;
-
+typedef void (*msca_release_f)(void *context, void *data);
 /**
  * @brief A releaser which uses releases data allocated by `malloc()`
  */
-extern msca_releaser_t msca_malloc_releaser;
+extern msca_release_f msca_malloc_release;
 
 /**
  * @brief A buffer release callback which calls `free(buf)`
@@ -110,29 +108,27 @@ void msca_mknull(size_t length, struct ArrowArray *array);
  * @param length Logical length of array
  * @param validity Validity buffer (bitmap)
  * @param data Data buffer
- * @param validity_releaser Release callback, nullable
- * validity buffer
- * @param data_releaser Releasese callback, nullable
+ * @param validity_release Release callback, nullable.
+ * @param validity_release_context Passed as first argument to
+ * `release_validity`
+ * @param data_release Releasese callback, nullable.
+ * @param data_release_context Passed as first argument to `release_data`
  * @param array Output array
  * @return msca_result_t
  */
 msca_result_t msca_mkprim(size_t length, uint8_t *validity, void *data,
-                          msca_releaser_t *validity_releaser,
-                          msca_releaser_t *data_releaser,
-                          struct ArrowArray *array);
+                          msca_release_f validity_release,
+                          void *validity_release_context,
+                          msca_release_f data_release,
+                          void *data_release_context, struct ArrowArray *array);
 
 #endif // MSCA_H__
 
 #ifdef MSCA_IMPLEMENTATION
 
-static void msca_malloc_releaser_release(msca_releaser_t *releaser,
-                                         void *data) {
-  free(data);
-}
+static void msca_malloc_release_(void *context, void *data) { free(data); }
 
-msca_releaser_t msca_malloc_releaser = {
-    .release = msca_malloc_releaser_release,
-};
+msca_release_f msca_malloc_release = &msca_malloc_release_;
 
 static void msca_release_null(struct ArrowArray *arr) { arr->release = NULL; }
 
@@ -144,27 +140,31 @@ void msca_mknull(size_t length, struct ArrowArray *array) {
 }
 
 typedef struct msca_prim_priv {
-  msca_releaser_t *data_releaser;
-  msca_releaser_t *nulls_releaser;
+  msca_release_f data_release;
+  void *data_release_context;
+  msca_release_f validity_release;
+  void *validity_release_context;
   const void *buffers[2];
 } msca_prim_priv_t;
 
 static void msca_release_prim(struct ArrowArray *arr) {
   msca_prim_priv_t *priv = (msca_prim_priv_t *)arr->private_data;
-  if (priv->nulls_releaser) {
-    priv->nulls_releaser->release(priv->nulls_releaser,
-                                  (void *)arr->buffers[0]);
+  if (priv->validity_release) {
+    priv->validity_release(priv->validity_release_context,
+                           (void *)arr->buffers[0]);
   }
-  if (priv->data_releaser) {
-    priv->data_releaser->release(priv->data_releaser, (void *)arr->buffers[1]);
+  if (priv->data_release) {
+    priv->data_release(priv->data_release_context, (void *)arr->buffers[1]);
   }
   free(priv);
   arr->release = NULL;
 }
 
-msca_result_t msca_mkprim(size_t length, uint8_t *nulls, void *data,
-                          msca_releaser_t *nulls_releaser,
-                          msca_releaser_t *data_releaser,
+msca_result_t msca_mkprim(size_t length, uint8_t *validity, void *data,
+                          msca_release_f validity_release,
+                          void *validity_release_context,
+                          msca_release_f data_release,
+                          void *data_release_context,
                           struct ArrowArray *array) {
   msca_result_t result = MSCA_ERR;
   // Private data
@@ -174,14 +174,16 @@ msca_result_t msca_mkprim(size_t length, uint8_t *nulls, void *data,
     goto finally;
   }
   *priv = (msca_prim_priv_t){0};
-  priv->data_releaser = data_releaser;
-  priv->nulls_releaser = nulls_releaser;
-  priv->buffers[0] = nulls;
+  priv->data_release = data_release;
+  priv->data_release_context = data_release_context;
+  priv->validity_release = validity_release;
+  priv->validity_release_context = validity_release_context;
+  priv->buffers[0] = validity;
   priv->buffers[1] = data;
   // Populate array
   *array = (struct ArrowArray){
       .length = length,
-      .null_count = nulls == NULL ? 0 : -1,
+      .null_count = validity == NULL ? 0 : -1,
       .n_buffers = 2,
       .buffers = priv->buffers,
       .release = msca_release_prim,
