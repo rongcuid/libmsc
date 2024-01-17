@@ -95,15 +95,15 @@ void msca_mknull(size_t length, struct ArrowArray *array) {
   array->release = msca_release_null;
 }
 
-struct msca_prim_priv {
+typedef struct msca_prim_priv {
   void (*data_release)(void *data);
   const void *buffers[2];
-};
+} msca_prim_priv_t;
 
 static void msca_release_prim(struct ArrowArray *arr) {
-  struct msca_prim_priv *priv = arr->private_data;
+  msca_prim_priv_t *priv = (msca_prim_priv_t *)arr->private_data;
   if (priv->data_release) {
-    priv->data_release(arr->buffers[1]);
+    priv->data_release((void *)arr->buffers[1]);
   }
   free(priv);
   arr->release = NULL;
@@ -113,12 +113,12 @@ msca_result msca_mkprim(void *data, size_t length,
                         void (*data_release)(void *data),
                         struct ArrowArray *array) {
   msca_result result = MSCA_ERR;
-  struct msca_prim_priv *priv = malloc(sizeof(*priv));
+  msca_prim_priv_t *priv = (msca_prim_priv_t *)malloc(sizeof(*priv));
   if (!priv) {
     result = MSCA_NOMEM;
     goto finally;
   }
-  *priv = (struct msca_prim_priv){0};
+  *priv = (msca_prim_priv_t){0};
   priv->data_release = data_release;
   priv->buffers[1] = data;
   *array = (struct ArrowArray){0};
