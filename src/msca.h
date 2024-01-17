@@ -5,6 +5,67 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+struct ArrowSchema;
+struct ArrowArray;
+struct ArrowArrayStream;
+
+/**
+ * @brief Callback structure for releasing a buffer
+ * @param context Arbitrary data for the release callback
+ * @param data Data to be released
+ */
+typedef void (*msca_release_f)(void *context, void *data);
+/**
+ * @brief A releaser which uses releases data allocated by `malloc()`
+ */
+extern msca_release_f msca_malloc_release;
+
+/**
+ * @brief A buffer release callback which calls `free(buf)`
+ *
+ * @param context
+ * @param buf
+ */
+void msca_buf_release_free(void *context, void *buf);
+
+typedef enum msca_result {
+  MSCA_OK = 0,
+  MSCA_ERR,
+  MSCA_NOMEM,
+} msca_result_t;
+
+/**
+ * @brief Create a null array. No allocations. Error is impossible.
+ *
+ * @param length Logical length of array
+ * @param array Output array
+ */
+void msca_mknull(size_t length, struct ArrowArray *array);
+
+/**
+ * @brief Create an untyped primitive array, taking ownership of buffers.
+ *
+ * @param length Logical length of array
+ * @param validity Validity buffer (bitmap)
+ * @param data Data buffer
+ * @param validity_release Release callback, nullable.
+ * @param validity_release_context Passed as first argument to
+ * `release_validity`
+ * @param data_release Releasese callback, nullable.
+ * @param data_release_context Passed as first argument to `release_data`
+ * @param array Output array
+ * @return msca_result_t
+ */
+msca_result_t msca_mkprim(size_t length, uint8_t *validity, void *data,
+                          msca_release_f validity_release,
+                          void *validity_release_context,
+                          msca_release_f data_release,
+                          void *data_release_context, struct ArrowArray *array);
+
+#endif // MSCA_H__
+
+#ifdef MSCA_IMPLEMENTATION
+
 // The following is the canonical definition of arrow C data interface
 // structures
 #ifndef ARROW_C_DATA_INTERFACE
@@ -68,63 +129,6 @@ struct ArrowArrayStream {
 };
 
 #endif // ARROW_C_STREAM_INTERFACE
-
-/**
- * @brief Callback structure for releasing a buffer
- * @param context Arbitrary data for the release callback
- * @param data Data to be released
- */
-typedef void (*msca_release_f)(void *context, void *data);
-/**
- * @brief A releaser which uses releases data allocated by `malloc()`
- */
-extern msca_release_f msca_malloc_release;
-
-/**
- * @brief A buffer release callback which calls `free(buf)`
- *
- * @param context
- * @param buf
- */
-void msca_buf_release_free(void *context, void *buf);
-
-typedef enum msca_result {
-  MSCA_OK = 0,
-  MSCA_ERR,
-  MSCA_NOMEM,
-} msca_result_t;
-
-/**
- * @brief Create a null array. No allocations. Error is impossible.
- *
- * @param length Logical length of array
- * @param array Output array
- */
-void msca_mknull(size_t length, struct ArrowArray *array);
-
-/**
- * @brief Create an untyped primitive array, taking ownership of buffers.
- *
- * @param length Logical length of array
- * @param validity Validity buffer (bitmap)
- * @param data Data buffer
- * @param validity_release Release callback, nullable.
- * @param validity_release_context Passed as first argument to
- * `release_validity`
- * @param data_release Releasese callback, nullable.
- * @param data_release_context Passed as first argument to `release_data`
- * @param array Output array
- * @return msca_result_t
- */
-msca_result_t msca_mkprim(size_t length, uint8_t *validity, void *data,
-                          msca_release_f validity_release,
-                          void *validity_release_context,
-                          msca_release_f data_release,
-                          void *data_release_context, struct ArrowArray *array);
-
-#endif // MSCA_H__
-
-#ifdef MSCA_IMPLEMENTATION
 
 static void msca_malloc_release_(void *context, void *data) { free(data); }
 
