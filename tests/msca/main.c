@@ -73,7 +73,7 @@ void setUp(void) {}
 
 void test_null_arr_create_release() {
   struct ArrowArray nullarr;
-  msca_mknull(&nullarr, 1000);
+  msca_arrnull(&nullarr, 1000);
   TEST_ASSERT_NOT_NULL(nullarr.release);
   TEST_ASSERT_EQUAL(nullarr.null_count, 1000);
   TEST_ASSERT_EQUAL(nullarr.length, 1000);
@@ -91,7 +91,7 @@ void test_int_arr_create_release() {
   memset(ints.data, 0, 1000 * sizeof(int32_t));
   TEST_ASSERT_EACH_EQUAL_INT(0, ints.data, 1000);
   struct ArrowArray intarr;
-  msca_mkprim(&intarr, 1000, NULL, &ints);
+  msca_arrprim(&intarr, 1000, NULL, &ints);
   TEST_ASSERT_NOT_NULL(intarr.release);
   TEST_ASSERT_EQUAL(intarr.length, 1000);
   TEST_ASSERT_EQUAL(intarr.n_buffers, 2);
@@ -103,7 +103,7 @@ void test_int_arr_create_release() {
 
 void test_int_arr_badargs() {
   struct ArrowArray arr = {0};
-  TEST_ASSERT_EQUAL(msca_mkprim(&arr, 0, NULL, NULL), MSCA_BADARGS);
+  TEST_ASSERT_EQUAL(msca_arrprim(&arr, 0, NULL, NULL), MSCA_BADARGS);
 }
 
 void tearDown(void) {}
