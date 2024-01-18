@@ -10,6 +10,18 @@ struct ArrowArray;
 struct ArrowArrayStream;
 
 /**
+ * @brief The primary error type
+ */
+typedef enum msca_result {
+  MSCA_OK = 0,
+  MSCA_ERR,
+  MSCA_NOMEM,
+  MSCA_BADARGS,
+} msca_result_t;
+
+/****** Buffers ******/
+
+/**
  * @brief Callback structure for releasing a buffer
  * @param context Arbitrary data for the release callback
  * @param data Data to be released
@@ -20,47 +32,20 @@ typedef void (*msca_release_f)(void *context, void *data);
  */
 extern msca_release_f msca_malloc_release;
 
-/**
- * @brief A buffer release callback which calls `free(buf)`
- *
- * @param context
- * @param buf
- */
-void msca_buf_release_free(void *context, void *buf);
+typedef struct msca_buf {
+  void *data;
+  msca_release_f release;
+  void *release_context;
+} msca_buf_t;
 
-typedef enum msca_result {
-  MSCA_OK = 0,
-  MSCA_ERR,
-  MSCA_NOMEM,
-} msca_result_t;
+msca_result_t msca_malloc(msca_buf_t *buf, size_t size);
+void msca_release(msca_buf_t *buf);
 
-/**
- * @brief Create a null array. No allocations. Error is impossible.
- *
- * @param length Logical length of array
- * @param array Output array
- */
-void msca_mknull(size_t length, struct ArrowArray *array);
+/****** Arrays ******/
 
-/**
- * @brief Create an untyped primitive array, taking ownership of buffers.
- *
- * @param length Logical length of array
- * @param validity Validity buffer (bitmap)
- * @param data Data buffer
- * @param validity_release Release callback, nullable.
- * @param validity_release_context Passed as first argument to
- * `release_validity`
- * @param data_release Releasese callback, nullable.
- * @param data_release_context Passed as first argument to `release_data`
- * @param array Output array
- * @return msca_result_t
- */
-msca_result_t msca_mkprim(size_t length, uint8_t *validity, void *data,
-                          msca_release_f validity_release,
-                          void *validity_release_context,
-                          msca_release_f data_release,
-                          void *data_release_context, struct ArrowArray *array);
+void msca_mknull(struct ArrowArray *array, size_t length);
+msca_result_t msca_mkprim(struct ArrowArray *array, size_t length,
+                          const msca_buf_t *validity, const msca_buf_t *data);
 
 #endif // MSCA_H__
 
@@ -130,60 +115,72 @@ struct ArrowArrayStream {
 
 #endif // ARROW_C_STREAM_INTERFACE
 
+msca_result_t msca_malloc(msca_buf_t *buf, size_t size) {
+  void *data = malloc(size);
+  if (!data) {
+    return MSCA_NOMEM;
+  }
+  *buf = (msca_buf_t){
+      .data = data,
+      .release = msca_malloc_release,
+      .release_context = NULL,
+  };
+  return MSCA_OK;
+}
+
+void msca_release(msca_buf_t *buf) {
+  if (buf->release) {
+    buf->release(buf->release_context, buf->data);
+  }
+}
+
 static void msca_malloc_release_(void *context, void *data) { free(data); }
 
 msca_release_f msca_malloc_release = &msca_malloc_release_;
 
 static void msca_release_null(struct ArrowArray *arr) { arr->release = NULL; }
 
-void msca_mknull(size_t length, struct ArrowArray *array) {
+void msca_mknull(struct ArrowArray *array, size_t length) {
   *array = (struct ArrowArray){0};
   array->length = length;
   array->null_count = length;
   array->release = msca_release_null;
 }
 
-typedef struct msca_prim_priv {
-  msca_release_f data_release;
-  void *data_release_context;
-  msca_release_f validity_release;
-  void *validity_release_context;
+struct msca_prim_priv {
+  msca_buf_t validity;
+  msca_buf_t data;
   const void *buffers[2];
-} msca_prim_priv_t;
+};
 
 static void msca_release_prim(struct ArrowArray *arr) {
-  msca_prim_priv_t *priv = (msca_prim_priv_t *)arr->private_data;
-  if (priv->validity_release) {
-    priv->validity_release(priv->validity_release_context,
-                           (void *)arr->buffers[0]);
-  }
-  if (priv->data_release) {
-    priv->data_release(priv->data_release_context, (void *)arr->buffers[1]);
-  }
+  struct msca_prim_priv *priv = (struct msca_prim_priv *)arr->private_data;
+  msca_release(&priv->validity);
+  msca_release(&priv->data);
   free(priv);
   arr->release = NULL;
 }
 
-msca_result_t msca_mkprim(size_t length, uint8_t *validity, void *data,
-                          msca_release_f validity_release,
-                          void *validity_release_context,
-                          msca_release_f data_release,
-                          void *data_release_context,
-                          struct ArrowArray *array) {
+msca_result_t msca_mkprim(struct ArrowArray *array, size_t length,
+                          const msca_buf_t *validity, const msca_buf_t *data) {
   msca_result_t result = MSCA_ERR;
+  if (data == NULL) {
+    result = MSCA_BADARGS;
+    goto finally;
+  }
   // Private data
-  msca_prim_priv_t *priv = (msca_prim_priv_t *)malloc(sizeof(*priv));
+  struct msca_prim_priv *priv =
+      (struct msca_prim_priv *)calloc(1, sizeof(*priv));
   if (!priv) {
     result = MSCA_NOMEM;
     goto finally;
   }
-  *priv = (msca_prim_priv_t){0};
-  priv->data_release = data_release;
-  priv->data_release_context = data_release_context;
-  priv->validity_release = validity_release;
-  priv->validity_release_context = validity_release_context;
-  priv->buffers[0] = validity;
-  priv->buffers[1] = data;
+  if (validity != NULL) {
+    priv->validity = *validity;
+    priv->buffers[0] = validity->data;
+  }
+  priv->data = *data;
+  priv->buffers[1] = data->data;
   // Populate array
   *array = (struct ArrowArray){
       .length = length,

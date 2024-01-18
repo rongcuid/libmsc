@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unity/unity.h>
 
 #include "msca.h"
@@ -71,7 +73,7 @@ void setUp(void) {}
 
 void test_null_arr_create_release() {
   struct ArrowArray nullarr;
-  msca_mknull(1000, &nullarr);
+  msca_mknull(&nullarr, 1000);
   TEST_ASSERT_NOT_NULL(nullarr.release);
   TEST_ASSERT_EQUAL(nullarr.null_count, 1000);
   TEST_ASSERT_EQUAL(nullarr.length, 1000);
@@ -82,10 +84,14 @@ void test_null_arr_create_release() {
 }
 
 void test_int_arr_create_release() {
-  int *ints = calloc(1000, sizeof(*ints));
-  TEST_ASSERT_EACH_EQUAL_INT(0, ints, 1000);
+  msca_buf_t ints;
+  TEST_ASSERT_EQUAL(msca_malloc(&ints, 1000 * sizeof(int32_t)), MSCA_OK);
+  TEST_ASSERT_NOT_NULL(ints.release);
+  TEST_ASSERT_NULL(ints.release_context);
+  memset(ints.data, 0, 1000 * sizeof(int32_t));
+  TEST_ASSERT_EACH_EQUAL_INT(0, ints.data, 1000);
   struct ArrowArray intarr;
-  msca_mkprim(1000, NULL, ints, NULL, NULL, msca_malloc_release, NULL, &intarr);
+  msca_mkprim(&intarr, 1000, NULL, &ints);
   TEST_ASSERT_NOT_NULL(intarr.release);
   TEST_ASSERT_EQUAL(intarr.length, 1000);
   TEST_ASSERT_EQUAL(intarr.n_buffers, 2);
@@ -95,11 +101,17 @@ void test_int_arr_create_release() {
   TEST_ASSERT_NULL(intarr.release);
 }
 
+void test_int_arr_badargs() {
+  struct ArrowArray arr = {0};
+  TEST_ASSERT_EQUAL(msca_mkprim(&arr, 0, NULL, NULL), MSCA_BADARGS);
+}
+
 void tearDown(void) {}
 
 int main(int argc, char **argv) {
   UNITY_BEGIN();
   RUN_TEST(test_null_arr_create_release);
   RUN_TEST(test_int_arr_create_release);
+  RUN_TEST(test_int_arr_badargs);
   return UNITY_END();
 }
