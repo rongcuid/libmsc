@@ -1,5 +1,5 @@
-#ifndef MSCA_H__
-#define MSCA_H__
+#ifndef MSCARR_H__
+#define MSCARR_H__
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -14,17 +14,17 @@ struct ArrowArrayStream;
 /**
  * @brief The primary error type
  */
-typedef enum msca_result {
-  MSCA_OK = 0,
-  MSCA_ERR,
-  MSCA_NOMEM,
-  MSCA_BADARGS,
-} msca_result_t;
+typedef enum mscarr_result {
+  MSCARR_OK = 0,
+  MSCARR_ERR,
+  MSCARR_NOMEM,
+  MSCARR_BADARGS,
+} mscarr_result_t;
 
 /****** Schema ******/
-msca_result_t msca_schprim(struct ArrowSchema *schema, const char *format,
-                           const char *name, const char *metadata,
-                           int64_t flags);
+mscarr_result_t mscarr_schprim(struct ArrowSchema *schema, const char *format,
+                               const char *name, const char *metadata,
+                               int64_t flags);
 
 // TODO add a vaarg schema builder?
 
@@ -35,32 +35,33 @@ msca_result_t msca_schprim(struct ArrowSchema *schema, const char *format,
  * @param context Arbitrary data for the release callback
  * @param data Data to be released
  */
-typedef void (*msca_release_f)(void *context, void *data);
+typedef void (*mscarr_release_f)(void *context, void *data);
 /**
  * @brief A releaser which uses releases data allocated by `malloc()`
  */
-extern msca_release_f msca_malloc_release;
+extern mscarr_release_f mscarr_malloc_release;
 
-typedef struct msca_buf {
+typedef struct mscarr_buf {
   void *data;
-  msca_release_f release;
+  mscarr_release_f release;
   void *release_context;
-} msca_buf_t;
+} mscarr_buf_t;
 
-msca_result_t msca_malloc(msca_buf_t *buf, size_t size);
-void msca_release(msca_buf_t *buf);
+mscarr_result_t mscarr_malloc(mscarr_buf_t *buf, size_t size);
+void mscarr_release(mscarr_buf_t *buf);
 
 /****** Arrays ******/
 
-void msca_arrnull(struct ArrowArray *array, size_t length);
-msca_result_t msca_arrprim(struct ArrowArray *array, size_t length,
-                           const msca_buf_t *validity, const msca_buf_t *data);
+void mscarr_arrnull(struct ArrowArray *array, size_t length);
+mscarr_result_t mscarr_arrprim(struct ArrowArray *array, size_t length,
+                               const mscarr_buf_t *validity,
+                               const mscarr_buf_t *data);
 
-#endif // MSCA_H__
+#endif // MSCARR_H__
 
 /****** Following is the implementation ******/
 
-#ifdef MSCA_IMPLEMENTATION
+#ifdef MSCARR_IMPLEMENTATION
 
 #include <string.h>
 
@@ -128,36 +129,36 @@ struct ArrowArrayStream {
 
 #endif // ARROW_C_STREAM_INTERFACE
 
-static void msca_schprim_release(struct ArrowSchema *schema) {
+static void mscarr_schprim_release(struct ArrowSchema *schema) {
   schema->release = NULL;
   free((void *)schema->name);
   free((void *)schema->format);
   free((void *)schema->metadata);
 }
 
-msca_result_t msca_schprim(struct ArrowSchema *schema, const char *format,
-                           const char *name, const char *metadata,
-                           int64_t flags) {
-  msca_result_t result = MSCA_ERR;
+mscarr_result_t mscarr_schprim(struct ArrowSchema *schema, const char *format,
+                               const char *name, const char *metadata,
+                               int64_t flags) {
+  mscarr_result_t result = MSCARR_ERR;
   if (format == NULL) {
-    result = MSCA_BADARGS;
+    result = MSCARR_BADARGS;
     goto finally;
   }
   size_t format_len = strnlen(format, 1024);
   if (format_len == 0) {
-    result = MSCA_BADARGS;
+    result = MSCARR_BADARGS;
     goto finally;
   }
   char *tmp_format = NULL, *tmp_name = NULL, *tmp_metadata = NULL;
   if (!strchr("nbcCsSiIlLefgzZuUdwt", format[0])) {
-    result = MSCA_BADARGS;
+    result = MSCARR_BADARGS;
     goto finally;
   }
   // Format
   // TODO: check format string validity
   tmp_format = malloc(format_len + 1);
   if (!tmp_format) {
-    result = MSCA_NOMEM;
+    result = MSCARR_NOMEM;
     goto finally;
   }
   memcpy(tmp_format, format, format_len + 1);
@@ -166,7 +167,7 @@ msca_result_t msca_schprim(struct ArrowSchema *schema, const char *format,
     size_t name_len = strnlen(name, 1024);
     tmp_name = malloc(name_len + 1);
     if (!tmp_name) {
-      result = MSCA_NOMEM;
+      result = MSCARR_NOMEM;
       goto err_after_fmt;
     }
     memcpy(tmp_name, name, name_len + 1);
@@ -176,7 +177,7 @@ msca_result_t msca_schprim(struct ArrowSchema *schema, const char *format,
     size_t meta_len = strnlen(metadata, 1024);
     tmp_metadata = malloc(meta_len + 1);
     if (!tmp_metadata) {
-      result = MSCA_NOMEM;
+      result = MSCARR_NOMEM;
       goto err_after_name;
     }
     memcpy(tmp_metadata, metadata, meta_len + 1);
@@ -185,7 +186,7 @@ msca_result_t msca_schprim(struct ArrowSchema *schema, const char *format,
       .format = tmp_format,
       .name = tmp_name,
       .metadata = tmp_metadata,
-      .release = &msca_schprim_release,
+      .release = &mscarr_schprim_release,
       .flags = flags,
   };
   goto ok;
@@ -194,70 +195,71 @@ err_after_name:
 err_after_fmt:
   free(tmp_format);
 ok:
-  result = MSCA_OK;
+  result = MSCARR_OK;
 finally:
   return result;
 }
 
-msca_result_t msca_malloc(msca_buf_t *buf, size_t size) {
+mscarr_result_t mscarr_malloc(mscarr_buf_t *buf, size_t size) {
   void *data = malloc(size);
   if (!data) {
-    return MSCA_NOMEM;
+    return MSCARR_NOMEM;
   }
-  *buf = (msca_buf_t){
+  *buf = (mscarr_buf_t){
       .data = data,
-      .release = msca_malloc_release,
+      .release = mscarr_malloc_release,
       .release_context = NULL,
   };
-  return MSCA_OK;
+  return MSCARR_OK;
 }
 
-void msca_release(msca_buf_t *buf) {
+void mscarr_release(mscarr_buf_t *buf) {
   if (buf->release) {
     buf->release(buf->release_context, buf->data);
   }
 }
 
-static void msca_malloc_release_(void *context, void *data) { free(data); }
+static void mscarr_malloc_release_(void *context, void *data) { free(data); }
 
-msca_release_f msca_malloc_release = &msca_malloc_release_;
+mscarr_release_f mscarr_malloc_release = &mscarr_malloc_release_;
 
-static void msca_release_null(struct ArrowArray *arr) { arr->release = NULL; }
+static void mscarr_release_null(struct ArrowArray *arr) { arr->release = NULL; }
 
-void msca_arrnull(struct ArrowArray *array, size_t length) {
+void mscarr_arrnull(struct ArrowArray *array, size_t length) {
   *array = (struct ArrowArray){0};
   array->length = length;
   array->null_count = length;
-  array->release = msca_release_null;
+  array->release = mscarr_release_null;
 }
 
-struct msca_arrprim_priv {
-  msca_buf_t validity;
-  msca_buf_t data;
+struct mscarr_arrprim_priv {
+  mscarr_buf_t validity;
+  mscarr_buf_t data;
   const void *buffers[2];
 };
 
-static void msca_release_prim(struct ArrowArray *arr) {
-  struct msca_arrprim_priv *priv =
-      (struct msca_arrprim_priv *)arr->private_data;
-  msca_release(&priv->validity);
-  msca_release(&priv->data);
+static void mscarr_release_prim(struct ArrowArray *arr) {
+  struct mscarr_arrprim_priv *priv =
+      (struct mscarr_arrprim_priv *)arr->private_data;
+  mscarr_release(&priv->validity);
+  mscarr_release(&priv->data);
   free(priv);
   arr->release = NULL;
 }
 
-msca_result_t msca_arrprim(struct ArrowArray *array, size_t length,
-                           const msca_buf_t *validity, const msca_buf_t *data) {
-  msca_result_t result = MSCA_ERR;
+mscarr_result_t mscarr_arrprim(struct ArrowArray *array, size_t length,
+                               const mscarr_buf_t *validity,
+                               const mscarr_buf_t *data) {
+  mscarr_result_t result = MSCARR_ERR;
   if (data == NULL) {
-    result = MSCA_BADARGS;
+    result = MSCARR_BADARGS;
     goto finally;
   }
   // Private data
-  struct msca_arrprim_priv *priv =
-      (struct msca_arrprim_priv *)calloc(1, sizeof(*priv));
+  struct mscarr_arrprim_priv *priv =
+      (struct mscarr_arrprim_priv *)calloc(1, sizeof(*priv));
   if (!priv) {
-    result = MSCA_NOMEM;
+    result = MSCARR_NOMEM;
     goto finally;
   }
   if (validity != NULL) {
@@ -272,7 +274,7 @@ msca_result_t msca_arrprim(struct ArrowArray *array, size_t length,
       .null_count = validity == NULL ? 0 : -1,
       .n_buffers = 2,
       .buffers = priv->buffers,
-      .release = msca_release_prim,
+      .release = mscarr_release_prim,
       .private_data = priv,
   };
   goto ok;
@@ -281,7 +283,7 @@ err_after_priv:
   free(priv);
   goto finally;
 ok:
-  result = MSCA_OK;
+  result = MSCARR_OK;
 finally:
   return result;
 }
