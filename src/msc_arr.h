@@ -1,5 +1,5 @@
-#ifndef MSCARR_H__
-#define MSCARR_H__
+#ifndef MSC_ARR_H_
+#define MSC_ARR_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -57,11 +57,11 @@ mscarr_result_t mscarr_arrprim(struct ArrowArray *array, size_t length,
                                const mscarr_buf_t *validity,
                                const mscarr_buf_t *data);
 
-#endif // MSCARR_H__
+#endif // MSC_ARR_H_
 
 /****** Following is the implementation ******/
 
-#ifdef MSCARR_IMPLEMENTATION
+#ifdef MSC_ARR_IMPLEMENTATION
 
 #include <string.h>
 
