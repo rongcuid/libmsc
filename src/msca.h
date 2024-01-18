@@ -22,7 +22,9 @@ typedef enum msca_result {
 } msca_result_t;
 
 /****** Schema ******/
-msca_result_t msca_schprim(struct ArrowSchema *schema, const char *format);
+msca_result_t msca_schprim(struct ArrowSchema *schema, const char *format,
+                           const char *name, const char *metadata,
+                           int64_t flags);
 
 // TODO add a vaarg schema builder?
 
@@ -126,11 +128,16 @@ struct ArrowArrayStream {
 
 #endif // ARROW_C_STREAM_INTERFACE
 
-struct msca_schprim_private {
-  const char format[8];
-};
+static void msca_schprim_release(struct ArrowSchema *schema) {
+  schema->release = NULL;
+  free((void *)schema->name);
+  free((void *)schema->format);
+  free((void *)schema->metadata);
+}
 
-msca_result_t msca_schprim(struct ArrowSchema *schema, const char *format) {
+msca_result_t msca_schprim(struct ArrowSchema *schema, const char *format,
+                           const char *name, const char *metadata,
+                           int64_t flags) {
   msca_result_t result = MSCA_ERR;
   if (format == NULL) {
     result = MSCA_BADARGS;
@@ -141,26 +148,51 @@ msca_result_t msca_schprim(struct ArrowSchema *schema, const char *format) {
     result = MSCA_BADARGS;
     goto finally;
   }
-  char *fmt;
+  char *tmp_format = NULL, *tmp_name = NULL, *tmp_metadata = NULL;
   if (!strchr("nbcCsSiIlLefgzZuUdwt", format[0])) {
     result = MSCA_BADARGS;
     goto finally;
   }
+  // Format
   // TODO: check format string validity
-  fmt = malloc(format_len + 1);
-  if (!fmt) {
+  tmp_format = malloc(format_len + 1);
+  if (!tmp_format) {
     result = MSCA_NOMEM;
     goto finally;
   }
-  memcpy(fmt, format, format_len + 1);
+  memcpy(tmp_format, format, format_len + 1);
+  // Name
+  if (name) {
+    size_t name_len = strnlen(name, 1024);
+    tmp_name = malloc(name_len + 1);
+    if (!tmp_name) {
+      result = MSCA_NOMEM;
+      goto err_after_fmt;
+    }
+    memcpy(tmp_name, name, name_len + 1);
+  }
+  // Meta
+  if (metadata) {
+    size_t meta_len = strnlen(metadata, 1024);
+    tmp_metadata = malloc(meta_len + 1);
+    if (!tmp_metadata) {
+      result = MSCA_NOMEM;
+      goto err_after_name;
+    }
+    memcpy(tmp_metadata, metadata, meta_len + 1);
+  }
   *schema = (struct ArrowSchema){
-      .format = fmt,
-      // TODO: name, meta, flags, release, private
-
+      .format = tmp_format,
+      .name = tmp_name,
+      .metadata = tmp_metadata,
+      .release = &msca_schprim_release,
+      .flags = flags,
   };
   goto ok;
+err_after_name:
+  free(tmp_name);
 err_after_fmt:
-  free(fmt);
+  free(tmp_format);
 ok:
   result = MSCA_OK;
 finally:

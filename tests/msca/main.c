@@ -71,7 +71,17 @@ struct ArrowArrayStream {
 
 void setUp(void) {}
 
-void test_null_arr_create_release() {
+void test_schprim_create_release() {
+  struct ArrowSchema schema;
+  msca_schprim(&schema, "n", "null", NULL, 0);
+  TEST_ASSERT_NOT_NULL(schema.release);
+  TEST_ASSERT_EQUAL_STRING("n", schema.format);
+  TEST_ASSERT_EQUAL_STRING("null", schema.name);
+  schema.release(&schema);
+  TEST_ASSERT_NULL(schema.release);
+}
+
+void test_arrnull_create_release() {
   struct ArrowArray nullarr;
   msca_arrnull(&nullarr, 1000);
   TEST_ASSERT_NOT_NULL(nullarr.release);
@@ -83,7 +93,7 @@ void test_null_arr_create_release() {
   TEST_ASSERT_NULL(nullarr.release);
 }
 
-void test_int_arr_create_release() {
+void test_arrint_create_release() {
   msca_buf_t ints;
   TEST_ASSERT_EQUAL(msca_malloc(&ints, 1000 * sizeof(int32_t)), MSCA_OK);
   TEST_ASSERT_NOT_NULL(ints.release);
@@ -101,7 +111,7 @@ void test_int_arr_create_release() {
   TEST_ASSERT_NULL(intarr.release);
 }
 
-void test_int_arr_badargs() {
+void test_arrint_badargs() {
   struct ArrowArray arr = {0};
   TEST_ASSERT_EQUAL(msca_arrprim(&arr, 0, NULL, NULL), MSCA_BADARGS);
 }
@@ -110,8 +120,9 @@ void tearDown(void) {}
 
 int main(int argc, char **argv) {
   UNITY_BEGIN();
-  RUN_TEST(test_null_arr_create_release);
-  RUN_TEST(test_int_arr_create_release);
-  RUN_TEST(test_int_arr_badargs);
+  RUN_TEST(test_schprim_create_release);
+  RUN_TEST(test_arrnull_create_release);
+  RUN_TEST(test_arrint_create_release);
+  RUN_TEST(test_arrint_badargs);
   return UNITY_END();
 }
