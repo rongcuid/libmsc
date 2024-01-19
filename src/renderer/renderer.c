@@ -52,25 +52,23 @@ finally:
 
 typedef struct {
   const char **items;
-  u32 count;
+  u32 len;
   b32 ok;
 } InstanceRequiredExtensions;
-static InstanceRequiredExtensions getInstanceRequiredExtensions(b32 validate) {
+static InstanceRequiredExtensions
+getInstanceRequiredExtensions(b32 validate, b32 portability) {
   InstanceRequiredExtensions result = {0};
   // Validation
   if (validate)
-    result.count += 1;
+    result.len += 1;
   // SDL extensions
   u32 sdlExtsCount;
   const char *const *sdlExts = SDL_Vulkan_GetInstanceExtensions(&sdlExtsCount);
-  result.count += sdlExtsCount;
-  // Instance extensions
-  InstanceExtensionProperties props = enumerateInstanceExtensionProperties();
-  b32 portability = instanceSupportsPortability(&props);
+  result.len += sdlExtsCount;
   if (portability)
-    result.count += 1;
+    result.len += 1;
   // Populate array
-  result.items = SDL_calloc(result.count, sizeof(const char *));
+  result.items = SDL_calloc(result.len, sizeof(const char *));
   if (!result.items)
     goto finally;
   const char **it = result.items;
@@ -83,8 +81,7 @@ static InstanceRequiredExtensions getInstanceRequiredExtensions(b32 validate) {
   result.ok = true;
   goto cleanup;
 cleanup:
-clean_get_extension_props:
-  SDL_free(props.items);
+
 finally:
   return result;
 }
@@ -172,17 +169,49 @@ typedef struct {
 } InstanceCreated;
 InstanceCreated instanceCreate(b32 validate) {
   InstanceCreated result = {0};
-  InstanceRequiredExtensions exts = getInstanceRequiredExtensions(validate);
+  // Instance extensions
+  InstanceExtensionProperties props = enumerateInstanceExtensionProperties();
+  b32 portability = instanceSupportsPortability(&props);
+  InstanceRequiredExtensions exts =
+      getInstanceRequiredExtensions(validate, portability);
   if (!exts.ok)
-    goto finally;
+    goto clean_ext_props;
   InstanceRequiredLayers layers = getInstanceRequiredLayers(validate);
   if (!layers.ok)
     goto clean_exts;
-clean:
+  VkApplicationInfo appInfo = {
+      .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+      .pApplicationName = "MSC",
+      .applicationVersion = VK_MAKE_VERSION(0, 1, 0),
+      .pEngineName = "MSCE",
+      .engineVersion = VK_MAKE_VERSION(0, 1, 0),
+      .apiVersion = VK_API_VERSION_1_2,
+  };
+  VkInstanceCreateInfo ci = {
+      .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+      .pNext = NULL, // TODO
+      .flags =
+          portability ? VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR : 0,
+      .pApplicationInfo = &appInfo,
+      .enabledLayerCount = layers.len,
+      .ppEnabledLayerNames = layers.items,
+      .enabledExtensionCount = exts.len,
+      .ppEnabledExtensionNames = exts.items,
+  };
+  if (vkCreateInstance(&ci, NULL, &result.value)) {
+    goto err;
+  }
+  volkLoadInstance(result.value);
+  result.ok = true;
+  goto cleanup;
+err:
+cleanup:
 clean_layers:
   SDL_free(layers.items);
 clean_exts:
   SDL_free(exts.items);
+clean_ext_props:
+  SDL_free(props.items);
 finally:
   return result;
 }
