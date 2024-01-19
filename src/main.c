@@ -2,6 +2,8 @@
 
 #include <SDL3/SDL_main.h>
 
+#include "renderer/renderer.h"
+
 void printSdlVersion() {
   SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "SDL compiled with: %d.%d.%d",
                SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_PATCHLEVEL);
@@ -23,6 +25,9 @@ int main(int argc, char **argv) {
     SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "Volk Init error: %d\n", res);
     return 1;
   }
+
+  RendererCreated renderer = rendererCreate(true);
+
   SDL_Quit();
   return 0;
 }
