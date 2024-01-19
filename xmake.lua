@@ -24,8 +24,12 @@ package_end()
 
 add_requires("unity_test ^2")
 add_requires("sdl3", {configs = {shared = true}})
-add_requires("vulkansdk", {configs = {utils = {"spirv-cross-c", "spirv-cross-cpp", "spirv-cross-util", "spirv-cross-glsl", "spirv-cross-reflect", "spirv-cross-core", "spirv-cross-msl", "spirv-cross-hlsl"}}})
-add_requires("volk")
+add_requires("vulkansdk", {configs = {utils = {
+    "volk", "shaderc",
+    "spirv-cross-c", "spirv-cross-cpp", "spirv-cross-util", 
+    "spirv-cross-glsl", "spirv-cross-reflect", "spirv-cross-core", 
+    "spirv-cross-msl", "spirv-cross-hlsl"
+}}})
 add_requires("nuklear")
 
 target("msc")
@@ -34,5 +38,5 @@ target("msc")
     add_includedirs("src")
     add_files("src/main.c", "src/**/*.c")
     add_packages("sdl3")
-    add_packages("volk", "vulkansdk")
+    add_packages("vulkansdk")
     add_packages("nuklear")

@@ -1,7 +1,7 @@
 #include "renderer.h"
 
 #include <SDL3/SDL_vulkan.h>
-#include <volk.h>
+#include <volk/volk.h>
 
 #include "vk/device.h"
 #include "vk/instance.h"
