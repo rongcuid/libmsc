@@ -73,7 +73,7 @@ void setUp(void) {}
 
 void test_schprim_create_release() {
   struct ArrowSchema schema;
-  mscarr_schprim(&schema, "n", "null", NULL, 0);
+  msca_schprim(&schema, "n", "null", NULL, 0);
   TEST_ASSERT_NOT_NULL(schema.release);
   TEST_ASSERT_EQUAL_STRING("n", schema.format);
   TEST_ASSERT_EQUAL_STRING("null", schema.name);
@@ -83,7 +83,7 @@ void test_schprim_create_release() {
 
 void test_arrnull_create_release() {
   struct ArrowArray nullarr;
-  mscarr_arrnull(&nullarr, 1000);
+  msca_arrnull(&nullarr, 1000);
   TEST_ASSERT_NOT_NULL(nullarr.release);
   TEST_ASSERT_EQUAL(nullarr.null_count, 1000);
   TEST_ASSERT_EQUAL(nullarr.length, 1000);
@@ -94,14 +94,14 @@ void test_arrnull_create_release() {
 }
 
 void test_arrint_create_release() {
-  mscarr_buf_t ints;
-  TEST_ASSERT_EQUAL(mscarr_malloc(&ints, 1000 * sizeof(int32_t)), MSCARR_OK);
+  msca_buf_t ints;
+  TEST_ASSERT_EQUAL(msca_malloc(&ints, 1000 * sizeof(int32_t)), MSCARR_OK);
   TEST_ASSERT_NOT_NULL(ints.release);
   TEST_ASSERT_NULL(ints.release_context);
   memset(ints.data, 0, 1000 * sizeof(int32_t));
   TEST_ASSERT_EACH_EQUAL_INT(0, ints.data, 1000);
   struct ArrowArray intarr;
-  mscarr_arrprim(&intarr, 1000, NULL, &ints);
+  msca_arrprim(&intarr, 1000, NULL, &ints);
   TEST_ASSERT_NOT_NULL(intarr.release);
   TEST_ASSERT_EQUAL(intarr.length, 1000);
   TEST_ASSERT_EQUAL(intarr.n_buffers, 2);
@@ -113,7 +113,7 @@ void test_arrint_create_release() {
 
 void test_arrint_badargs() {
   struct ArrowArray arr = {0};
-  TEST_ASSERT_EQUAL(mscarr_arrprim(&arr, 0, NULL, NULL), MSCARR_BADARGS);
+  TEST_ASSERT_EQUAL(msca_arrprim(&arr, 0, NULL, NULL), MSCARR_BADARGS);
 }
 
 void tearDown(void) {}

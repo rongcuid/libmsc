@@ -1,4 +1,12 @@
 If:
     PathMatch: src/msc_arr.h
 CompileFlags:
-    Add: -DMSCA_IMPLEMENTATION
+    Add: -DMSC_ARR_IMPLEMENTATION
+
+---
+
+If:
+    PathMatch: src/msc_rng.h
+CompileFlags:
+    Add: -DMSC_RNG_IMPLEMENTATION
+    
