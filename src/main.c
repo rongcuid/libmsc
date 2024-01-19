@@ -27,7 +27,11 @@ int main(int argc, char **argv) {
   }
 
   RendererCreated renderer = rendererCreate(true);
-
+  if (!renderer.ok) {
+    SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "Failed to create renderer");
+    return 1;
+  }
+  rendererDestroy(renderer.value);
   SDL_Quit();
   return 0;
 }

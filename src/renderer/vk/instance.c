@@ -230,7 +230,7 @@ InstanceCreated instanceCreate(b32 validate) {
   volkLoadInstance(result.instance);
   if (validate) {
     if (vkCreateDebugUtilsMessengerEXT(result.instance, &debugCI, NULL,
-                                       &result.debug)) {
+                                       &result.messenger)) {
       goto err_after_instance;
     }
   }
