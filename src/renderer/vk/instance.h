@@ -1,6 +1,5 @@
 #pragma once
 
-#include <string.h>
 #include <volk.h>
 
 typedef struct {

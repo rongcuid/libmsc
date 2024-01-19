@@ -1,7 +1,6 @@
 #include "instance.h"
 
 #include <SDL3/SDL_vulkan.h>
-#include <string.h>
 
 ////// Instance creation
 
@@ -56,8 +55,8 @@ b32 instanceSupportsPortability(const InstanceExtensionProperties *props) {
 
   for (u32 i = 0; i < props->len; ++i) {
     VkExtensionProperties prop = props->items[i];
-    if (strcmp(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
-               prop.extensionName) == 0) {
+    if (SDL_strcmp(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
+                   prop.extensionName) == 0) {
       result = true;
       goto finally;
     }
@@ -135,12 +134,12 @@ static void findInstanceRequiredLayers(const InstanceLayerProperties *props,
   *pCount = 0;
   for (u32 i = 0; i < props->len; ++i) {
     VkLayerProperties prop = props->items[i];
-    if (strcmp("VK_LAYER_KHRONOS_synchronization2", prop.layerName) == 0) {
+    if (SDL_strcmp("VK_LAYER_KHRONOS_synchronization2", prop.layerName) == 0) {
       if (ppLayers)
         ppLayers[*pCount] = "VK_LAYER_KHRONOS_synchronization2";
       ++(*pCount);
-    } else if (strcmp("VK_LAYER_KHRONOS_timeline_semaphore", prop.layerName) ==
-               0) {
+    } else if (SDL_strcmp("VK_LAYER_KHRONOS_timeline_semaphore",
+                          prop.layerName) == 0) {
       if (ppLayers)
         ppLayers[*pCount] = "VK_LAYER_KHRONOS_timeline_semaphore";
       ++(*pCount);

@@ -25,13 +25,15 @@ int main(int argc, char **argv) {
     SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "Volk Init error: %d\n", res);
     return 1;
   }
-
-  RendererCreated renderer = rendererCreate(true);
+  SDL_Window *window =
+      SDL_CreateWindow("MSC", 1280, 720, SDL_WINDOW_VULKAN | SDL_WINDOW_HIDDEN);
+  RendererCreated renderer = rendererCreate(true, window);
   if (!renderer.ok) {
     SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "Failed to create renderer");
     return 1;
   }
   rendererDestroy(renderer.value);
+  SDL_DestroyWindow(window);
   SDL_Quit();
   return 0;
 }
