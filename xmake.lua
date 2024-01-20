@@ -25,7 +25,7 @@ package_end()
 add_requires("unity_test ^2")
 add_requires("sdl3", {configs = {shared = true}})
 add_requires("vulkansdk", {configs = {utils = {
-    "volk", "shaderc",
+    "volk",
     "spirv-cross-c", "spirv-cross-cpp", "spirv-cross-util", 
     "spirv-cross-glsl", "spirv-cross-reflect", "spirv-cross-core", 
     "spirv-cross-msl", "spirv-cross-hlsl"
@@ -34,6 +34,8 @@ add_requires("nuklear")
 
 target("msc")
     set_kind("binary")
+    add_rules("utils.glsl2spv", {bin2c = true})
+    add_files("shaders/**/*.vert", "shaders/**/*.frag")
     set_pcheader("src/stdafx.h")
     add_includedirs("src")
     add_files("src/main.c", "src/**/*.c")

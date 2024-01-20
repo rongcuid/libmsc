@@ -7,7 +7,10 @@ typedef struct Pipeline {
   VkPipelineLayout layout;
 } Pipeline;
 
+typedef struct SpvCode {
+  const char *spv;
+  u32 size;
+} SpvCode;
+
 b32 pipelineInitFromShaders(Pipeline *pipeline, VkDevice device,
-                            VkPipelineCache cache, const uint32_t *vertSpv,
-                            u32 vertSpvSize, const uint32_t *fragSpv,
-                            u32 fragSpvSize);
+                            VkPipelineCache cache, SpvCode vert, SpvCode frag);

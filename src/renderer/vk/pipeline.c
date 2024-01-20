@@ -7,13 +7,17 @@ static void spvcErrCallback(void *pUserData, const char *msg) {
   SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s", msg);
 }
 
-b32 pipelineInitFromShaders(Pipeline *pipeline, VkDevice device,
-                            VkPipelineCache cache, const uint32_t *vertSpv,
-                            u32 vertSpvSize, const uint32_t *fragSpv,
-                            u32 fragSpvSize) {
-  b32 result = false;
-  usize vertWordCount = vertSpvSize / sizeof(SpvId);
-  usize fragWordCount = fragSpvSize / sizeof(SpvId);
+typedef struct {
+  b32 ok;
+} ShaderResources;
+ShaderResources getShaderResources(const char *spv, usize size) {
+  ShaderResources result = {0};
+  if ((uptr)spv % alignof(SpvId) != 0) {
+    goto finally;
+  }
+  // Create compiler
+  const SpvId *spirv = (const SpvId *)spv;
+  usize wordCount = size / sizeof(SpvId);
   spvc_context context = NULL;
   spvc_parsed_ir ir = NULL;
   spvc_compiler compiler = NULL;
@@ -26,7 +30,7 @@ b32 pipelineInitFromShaders(Pipeline *pipeline, VkDevice device,
     goto finally;
   }
   spvc_context_set_error_callback(context, &spvcErrCallback, NULL);
-  if (spvc_context_parse_spirv(context, vertSpv, vertWordCount, &ir) !=
+  if (spvc_context_parse_spirv(context, spirv, wordCount, &ir) !=
       SPVC_SUCCESS) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to parse vertex SPV");
     goto clean_context;
@@ -38,15 +42,32 @@ b32 pipelineInitFromShaders(Pipeline *pipeline, VkDevice device,
                  "Failed to create SPVC compiler");
     goto clean_context;
   }
+  // Get shader resources
   spvc_compiler_create_shader_resources(compiler, &resources);
   spvc_resources_get_resource_list_for_type(
       resources, SPVC_RESOURCE_TYPE_UNIFORM_BUFFER, &list, &count);
   for (usize i = 0; i < count; ++i) {
     const spvc_reflected_resource *res = &list[i];
   }
-  result = true;
 clean_context:
   spvc_context_destroy(context);
+finally:
+  return result;
+}
+
+b32 pipelineInitFromShaders(Pipeline *pipeline, VkDevice device,
+                            VkPipelineCache cache, SpvCode vert, SpvCode frag) {
+  b32 result = false;
+  ShaderResources vertRsc = getShaderResources(vert.spv, vert.size);
+  if (!vertRsc.ok) {
+    goto finally;
+  }
+  ShaderResources fragRsc = getShaderResources(frag.spv, frag.size);
+  if (!fragRsc.ok) {
+    goto clean_vert_rsc;
+  }
+  result = true;
+clean_vert_rsc:
 finally:
   return result;
 }
