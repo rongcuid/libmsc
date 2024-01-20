@@ -1,6 +1,5 @@
-#include <volk/volk.h>
-
 #include <SDL3/SDL_main.h>
+#include <volk/volk.h>
 
 #include "renderer/renderer.h"
 
