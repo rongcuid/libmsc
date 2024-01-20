@@ -7,6 +7,14 @@ static void spvcErrCallback(void *pUserData, const char *msg) {
   SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s", msg);
 }
 
+static const spvc_resource_type spvcResourceTypes[] = {
+    SPVC_RESOURCE_TYPE_UNIFORM_BUFFER,
+    SPVC_RESOURCE_TYPE_STORAGE_BUFFER,
+    SPVC_RESOURCE_TYPE_SAMPLED_IMAGE,
+};
+static const usize spvcResourceTypesLen =
+    sizeof(spvcResourceTypes) / sizeof(spvc_resource_type);
+
 typedef struct {
   b32 ok;
 } ShaderResources;
@@ -35,7 +43,7 @@ ShaderResources getShaderResources(const char *spv, usize size) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to parse vertex SPV");
     goto clean_context;
   }
-  if (spvc_context_create_compiler(context, SPVC_BACKEND_NONE, ir,
+  if (spvc_context_create_compiler(context, SPVC_BACKEND_GLSL, ir,
                                    SPVC_CAPTURE_MODE_TAKE_OWNERSHIP,
                                    &compiler) != SPVC_SUCCESS) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
@@ -44,11 +52,19 @@ ShaderResources getShaderResources(const char *spv, usize size) {
   }
   // Get shader resources
   spvc_compiler_create_shader_resources(compiler, &resources);
-  spvc_resources_get_resource_list_for_type(
-      resources, SPVC_RESOURCE_TYPE_UNIFORM_BUFFER, &list, &count);
+  if (spvc_resources_get_resource_list_for_type(
+          resources, SPVC_RESOURCE_TYPE_UNIFORM_BUFFER, &list, &count) !=
+      SPVC_SUCCESS) {
+    goto clean_context;
+  }
   for (usize i = 0; i < count; ++i) {
     const spvc_reflected_resource *res = &list[i];
+    u32 set = spvc_compiler_get_decoration(compiler, res->id,
+                                           SpvDecorationDescriptorSet);
+    u32 binding =
+        spvc_compiler_get_decoration(compiler, res->id, SpvDecorationBinding);
   }
+
 clean_context:
   spvc_context_destroy(context);
 finally:
