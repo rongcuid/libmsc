@@ -1,18 +1,23 @@
 #include "msc_alg.h"
 
-void mscalg_swap(void *a, void *b, usize size) {
-  void *tmp = SDL_malloc(size);
-  SDL_memcpy(tmp, b, size);
-  SDL_memcpy(a, tmp, size);
-  SDL_free(tmp);
-  SDL_memcpy(b, a, size);
+#ifndef NO_STDLIB
+#include <stdlib.h>
+#include <string.h>
+#endif
+
+void mscalg_swap(void *a, void *b, size_t size) {
+  void *tmp = malloc(size);
+  memcpy(tmp, b, size);
+  memcpy(a, tmp, size);
+  free(tmp);
+  memcpy(b, a, size);
 }
 
-static isize qsort_partition(void *items, usize elem_size, isize l, isize h,
-                             msc_cmp_f comp, void *context) {
+static ptrdiff_t qsort_partition(void *items, size_t elem_size, ptrdiff_t l,
+                                 ptrdiff_t h, msc_cmp_f comp, void *context) {
   void *x = items + (elem_size * h);
-  isize i = l - 1;
-  for (isize j = 1; j < h - 1; ++j) {
+  ptrdiff_t i = l - 1;
+  for (ptrdiff_t j = 1; j < h - 1; ++j) {
     void *y = items + (elem_size * j);
     if (comp(context, x, y) > 0) {
       ++i;
@@ -23,10 +28,10 @@ static isize qsort_partition(void *items, usize elem_size, isize l, isize h,
   return i + 1;
 }
 
-static void do_qsort(void *items, size_t elem_size, isize l, isize h,
+static void do_qsort(void *items, size_t elem_size, ptrdiff_t l, ptrdiff_t h,
                      msc_cmp_f comp, void *context) {
   if (l < h) {
-    isize p = qsort_partition(items, elem_size, l, h, comp, context);
+    ptrdiff_t p = qsort_partition(items, elem_size, l, h, comp, context);
     do_qsort(items, elem_size, l, p - 1, comp, context);
     do_qsort(items, elem_size, p + 1, h, comp, context);
   }

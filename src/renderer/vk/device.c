@@ -1,6 +1,6 @@
 #include "device.h"
 
-#include "msc/msc_alg.h"
+#include "msc_alg.h"
 
 typedef struct {
   VkPhysicalDevice *items;
@@ -31,16 +31,16 @@ static int deviceRank(VkPhysicalDevice phy) {
   VkPhysicalDeviceProperties prop;
   vkGetPhysicalDeviceProperties(phy, &prop);
   switch (prop.deviceType) {
-  case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
-    return 0;
-  case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
-    return 1;
-  case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
-    return 2;
-  case VK_PHYSICAL_DEVICE_TYPE_CPU:
-    return 3;
-  default:
-    return 4;
+    case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+      return 0;
+    case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+      return 1;
+    case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+      return 2;
+    case VK_PHYSICAL_DEVICE_TYPE_CPU:
+      return 3;
+    default:
+      return 4;
   }
 }
 
@@ -103,21 +103,21 @@ static void summarizeDevice(VkPhysicalDevice phy) {
   vkGetPhysicalDeviceProperties(phy, &props);
   const char *type;
   switch (props.deviceType) {
-  case VK_PHYSICAL_DEVICE_TYPE_CPU:
-    type = "CPU";
-    break;
-  case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
-    type = "Discrete";
-    break;
-  case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
-    type = "Integrated";
-    break;
-  case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
-    type = "Virtual";
-    break;
-  default:
-    type = "Other";
-    break;
+    case VK_PHYSICAL_DEVICE_TYPE_CPU:
+      type = "CPU";
+      break;
+    case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+      type = "Discrete";
+      break;
+    case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+      type = "Integrated";
+      break;
+    case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+      type = "Virtual";
+      break;
+    default:
+      type = "Other";
+      break;
   }
   RequiredFeatures features;
   initRequiredFeatures(&features);
@@ -251,8 +251,7 @@ static void fillRequiredExtensions(const VkExtensionProperties *props,
       ++(*pLen);
     } else if (SDL_strcmp("VK_KHR_portability_subset", prop->extensionName) ==
                0) {
-      if (ppExtensions)
-        ppExtensions[*pLen] = "VK_KHR_portability_subset";
+      if (ppExtensions) ppExtensions[*pLen] = "VK_KHR_portability_subset";
       ++(*pLen);
     }
   }
@@ -279,8 +278,7 @@ static DeviceExtensions getRequiredExtensions(VkPhysicalDevice phy) {
   fillRequiredExtensions(props, numProps, &result.len, result.items);
   result.ok = true;
 clean_items:
-  if (!result.ok)
-    SDL_free(result.items);
+  if (!result.ok) SDL_free(result.items);
 clean_props:
   SDL_free(props);
 finally:
