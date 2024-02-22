@@ -20,14 +20,12 @@ struct Renderer {
   VkQueue presentQueue;
 };
 
-RendererCreated rendererCreate(b32 validate, SDL_Window *window) {
+RendererCreated rendererCreate(bool validate, SDL_Window *window) {
   RendererCreated result = {0};
   result.value = SDL_malloc(sizeof(Renderer));
-  if (!result.value)
-    goto finally;
+  if (!result.value) goto finally;
   InstanceCreated inst = instanceCreate(validate);
-  if (!inst.ok)
-    goto finally;
+  if (!inst.ok) goto finally;
   result.value->instance = inst.instance;
   result.value->messenger = inst.messenger;
   if (!SDL_Vulkan_CreateSurface(window, inst.instance, NULL,
@@ -45,8 +43,7 @@ RendererCreated rendererCreate(b32 validate, SDL_Window *window) {
 ok:
   result.ok = true;
 clean_device:
-  if (!result.ok)
-    vkDestroyDevice(device.device, NULL);
+  if (!result.ok) vkDestroyDevice(device.device, NULL);
 clean_surface:
   if (!result.ok)
     vkDestroySurfaceKHR(result.value->instance, result.value->surface, NULL);
@@ -57,8 +54,7 @@ clean_instance:
     vkDestroyInstance(inst.instance, NULL);
   }
 clean_malloc:
-  if (!result.ok)
-    SDL_free(result.value);
+  if (!result.ok) SDL_free(result.value);
 finally:
   return result;
 }

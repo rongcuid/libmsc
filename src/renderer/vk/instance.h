@@ -5,6 +5,6 @@
 typedef struct {
   VkInstance instance;
   VkDebugUtilsMessengerEXT messenger;
-  b32 ok;
+  bool ok;
 } InstanceCreated;
-InstanceCreated instanceCreate(b32 validate);
+InstanceCreated instanceCreate(bool validate);

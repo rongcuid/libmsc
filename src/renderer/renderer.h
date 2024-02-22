@@ -4,7 +4,7 @@ typedef struct Renderer Renderer;
 
 typedef struct {
   Renderer *value;
-  b32 ok;
+  bool ok;
 } RendererCreated;
-RendererCreated rendererCreate(b32 validate, SDL_Window *window);
+RendererCreated rendererCreate(bool validate, SDL_Window *window);
 void rendererDestroy(Renderer *renderer);

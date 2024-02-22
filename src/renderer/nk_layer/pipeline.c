@@ -2,20 +2,20 @@
 
 // Note that this is always aligned to 4-byte
 typedef struct {
-  u32 size;
+  uint32_t size;
   const char code[];
 } Spv;
 
 ////// Pipeline definitions
 static const Spv vertSpv = {
-    .size = sizeof(vertSpv) - sizeof(u32),
+    .size = sizeof(vertSpv) - sizeof(uint32_t),
     .code =
         {
 #include "nk.vert.spv.h"
         },
 };
 static const Spv fragSpv = {
-    .size = sizeof(fragSpv) - sizeof(u32),
+    .size = sizeof(fragSpv) - sizeof(uint32_t),
     .code =
         {
 #include "nk.frag.spv.h"
@@ -91,9 +91,9 @@ static const VkDescriptorSetLayoutBinding dsBindings0[] = {
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
     },
 };
-static const u32 dsBindings0Len =
+static const uint32_t dsBindings0Len =
     sizeof(dsBindings0) / sizeof(VkDescriptorSetLayoutBinding);
-static const u32 dslBinding0Flags[] = {
+static const uint32_t dslBinding0Flags[] = {
     VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
     VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT,
 };
@@ -105,7 +105,7 @@ static const VkDescriptorSetLayoutBinding dsBindings1[] = {
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
     },
 };
-static const u32 dsBindings1Len =
+static const uint32_t dsBindings1Len =
     sizeof(dsBindings1) / sizeof(VkDescriptorSetLayoutBinding);
 
 ////// Descriptor set create infos
@@ -144,7 +144,7 @@ typedef struct {
   VkShaderModule vertModule;
   VkShaderModule fragModule;
   VkPipelineShaderStageCreateInfo stages[2];
-  b32 ok;
+  bool ok;
 } ShaderStagesCreated;
 static ShaderStagesCreated createShaderStages(VkDevice device) {
   ShaderStagesCreated result = {0};
@@ -152,7 +152,7 @@ static ShaderStagesCreated createShaderStages(VkDevice device) {
   VkShaderModuleCreateInfo vertCI = {
       .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
       .codeSize = vertSpv.size,
-      .pCode = (u32 *)vertSpv.code,
+      .pCode = (uint32_t *)vertSpv.code,
   };
   if (vkCreateShaderModule(device, &vertCI, NULL, &result.vertModule)) {
     goto finally;
@@ -160,7 +160,7 @@ static ShaderStagesCreated createShaderStages(VkDevice device) {
   VkShaderModuleCreateInfo fragCI = {
       .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
       .codeSize = fragSpv.size,
-      .pCode = (u32 *)fragSpv.code,
+      .pCode = (uint32_t *)fragSpv.code,
   };
   if (vkCreateShaderModule(device, &fragCI, NULL, &result.fragModule)) {
     goto clean_vert;
@@ -189,8 +189,8 @@ finally:
 
 typedef struct {
   VkDescriptorSetLayout *items;
-  u32 len;
-  b32 ok;
+  uint32_t len;
+  bool ok;
 } DSLayoutsCreated;
 static DSLayoutsCreated createDescriptorSetLayouts(VkDevice device) {
   DSLayoutsCreated result = {0};
@@ -218,10 +218,10 @@ finally:
 
 typedef struct {
   VkPipelineLayout value;
-  b32 ok;
+  bool ok;
 } PipelineLayoutCreated;
 static PipelineLayoutCreated createPipelineLayout(
-    VkDevice device, const VkDescriptorSetLayout *setLayouts, u32 setLen) {
+    VkDevice device, const VkDescriptorSetLayout *setLayouts, uint32_t setLen) {
   PipelineLayoutCreated result = {0};
   VkPipelineLayoutCreateInfo ci = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
@@ -281,7 +281,7 @@ clean_layout:
   if (!result.ok) vkDestroyPipelineLayout(device, layout.value, NULL);
 clean_dslayout:
   if (!result.ok)
-    for (u32 i = 0; i < dsLayouts.len; ++i)
+    for (uint32_t i = 0; i < dsLayouts.len; ++i)
       vkDestroyDescriptorSetLayout(device, dsLayouts.items[i], NULL);
 clean_stages:
   if (!result.ok) {

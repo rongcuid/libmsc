@@ -6,7 +6,7 @@ typedef struct NkLayer NkLayer;
 
 typedef struct {
   NkLayer *value;
-  b32 ok;
+  bool ok;
 } NkLayerCreated;
 NkLayerCreated nkLayerCreate(VkDevice device, VkPipelineCache cache,
                              VkSurfaceKHR surface);

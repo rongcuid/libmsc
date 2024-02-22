@@ -4,8 +4,8 @@
 
 typedef struct {
   VkPhysicalDevice *items;
-  u32 len;
-  b32 ok;
+  uint32_t len;
+  bool ok;
 } PhysicalDevices;
 PhysicalDevices enumeratePhysicalDevices(VkInstance instance) {
   PhysicalDevices result = {0};
@@ -86,7 +86,7 @@ static void setRequiredFeatures(RequiredFeatures *features) {
   features->descriptorIndexing.runtimeDescriptorArray = true;
 }
 
-static b32 requiredFeaturesIsAvailable(const RequiredFeatures *features) {
+static bool requiredFeaturesIsAvailable(const RequiredFeatures *features) {
   return features->dynamicRendering.dynamicRendering &&
          features->sync2.synchronization2 &&
          features->timelineSemaphore.timelineSemaphore &&
@@ -138,15 +138,16 @@ static void summarizeDevice(VkPhysicalDevice phy) {
           : "-");
 }
 
-static isize compareDevice(const void *context, const void *a, const void *b) {
+static ptrdiff_t compareDevice(const void *context, const void *a,
+                               const void *b) {
   (void)context;
   const VkPhysicalDevice *pa = a, *pb = b;
   return deviceRank(*pa) - deviceRank(*pb);
 }
 
-VkPhysicalDevice pickDevices(VkPhysicalDevice *pDevices, u32 len) {
+VkPhysicalDevice pickDevices(VkPhysicalDevice *pDevices, uint32_t len) {
   mscalg_qsort(pDevices, len, sizeof(VkPhysicalDevice), &compareDevice, NULL);
-  for (isize i = 0; i < len; ++i) {
+  for (ptrdiff_t i = 0; i < len; ++i) {
     summarizeDevice(pDevices[i]);
     RequiredFeatures features;
     initRequiredFeatures(&features);
@@ -158,7 +159,7 @@ VkPhysicalDevice pickDevices(VkPhysicalDevice *pDevices, u32 len) {
   return VK_NULL_HANDLE;
 }
 
-static b32 qfiSupportsGraphics(const VkQueueFamilyProperties *prop) {
+static bool qfiSupportsGraphics(const VkQueueFamilyProperties *prop) {
   return (prop->queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0;
 }
 
@@ -166,10 +167,10 @@ static const float queuePriorities[1] = {1.0};
 
 typedef struct {
   VkDeviceQueueCreateInfo items[2];
-  u32 len;
-  u32 graphicsQFI;
-  u32 presentQFI;
-  b32 ok;
+  uint32_t len;
+  uint32_t graphicsQFI;
+  uint32_t presentQFI;
+  bool ok;
 } DeviceQCIs;
 /**
  * @brief Create one queue per family
@@ -179,19 +180,19 @@ typedef struct {
  */
 static DeviceQCIs getDeviceQCIs(VkPhysicalDevice phy, VkSurfaceKHR surface) {
   DeviceQCIs result = {0};
-  u32 numQFIs;
+  uint32_t numQFIs;
   vkGetPhysicalDeviceQueueFamilyProperties(phy, &numQFIs, NULL);
   VkQueueFamilyProperties *props =
       SDL_calloc(numQFIs, sizeof(VkQueueFamilyProperties));
   vkGetPhysicalDeviceQueueFamilyProperties(phy, &numQFIs, props);
-  b32 foundGraphics = false, foundPresent = false;
-  u32 graphicsQFI, presentQFI;
-  for (isize i = 0; i < numQFIs; ++i) {
+  bool foundGraphics = false, foundPresent = false;
+  uint32_t graphicsQFI, presentQFI;
+  for (ptrdiff_t i = 0; i < numQFIs; ++i) {
     if (!foundGraphics && qfiSupportsGraphics(&props[i])) {
       foundGraphics = true;
       graphicsQFI = i;
     }
-    b32 supportsPresent;
+    VkBool32 supportsPresent;
     if (vkGetPhysicalDeviceSurfaceSupportKHR(phy, i, surface,
                                              &supportsPresent)) {
       goto clean_props;
@@ -229,10 +230,10 @@ finally:
 }
 
 static void fillRequiredExtensions(const VkExtensionProperties *props,
-                                   u32 numProps, u32 *pLen,
+                                   uint32_t numProps, uint32_t *pLen,
                                    const char **ppExtensions) {
   *pLen = 0;
-  for (u32 i = 0; i < numProps; ++i) {
+  for (uint32_t i = 0; i < numProps; ++i) {
     const VkExtensionProperties *prop = &props[i];
     if (SDL_strcmp(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
                    prop->extensionName) == 0) {
@@ -259,12 +260,12 @@ static void fillRequiredExtensions(const VkExtensionProperties *props,
 
 typedef struct {
   const char **items;
-  u32 len;
-  b32 ok;
+  uint32_t len;
+  bool ok;
 } DeviceExtensions;
 static DeviceExtensions getRequiredExtensions(VkPhysicalDevice phy) {
   DeviceExtensions result = {0};
-  u32 numProps;
+  uint32_t numProps;
   if (vkEnumerateDeviceExtensionProperties(phy, NULL, &numProps, NULL)) {
     goto finally;
   }

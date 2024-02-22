@@ -7,6 +7,6 @@ typedef struct {
   VkDevice device;
   VkQueue graphicsQueue;
   VkQueue presentQueue;
-  b32 ok;
+  bool ok;
 } DeviceCreated;
 DeviceCreated deviceCreate(VkInstance instance, VkSurfaceKHR surface);

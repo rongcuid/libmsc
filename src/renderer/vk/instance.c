@@ -4,11 +4,11 @@
 
 ////// Instance creation
 
-static VkBool32
-debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
-              VkDebugUtilsMessageTypeFlagsEXT type,
-              const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
-              void *pUserData) {
+static VkBool32 debugCallback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT severity,
+    VkDebugUtilsMessageTypeFlagsEXT type,
+    const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
+    void *pUserData) {
   (void)type;
   (void)pUserData;
   if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
@@ -25,8 +25,8 @@ debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
 
 typedef struct {
   VkExtensionProperties *items;
-  u32 len;
-  b32 ok;
+  uint32_t len;
+  bool ok;
 } InstanceExtensionProperties;
 static InstanceExtensionProperties enumerateInstanceExtensionProperties() {
   InstanceExtensionProperties result = {0};
@@ -35,8 +35,7 @@ static InstanceExtensionProperties enumerateInstanceExtensionProperties() {
     goto finally;
   }
   result.items = SDL_calloc(result.len, sizeof(VkExtensionProperties));
-  if (!result.items)
-    goto finally;
+  if (!result.items) goto finally;
   if (vkEnumerateInstanceExtensionProperties(NULL, &result.len, result.items)) {
     SDL_Log("Failed to enumerate instance extension properties");
     goto err_after_calloc_props;
@@ -50,10 +49,10 @@ finally:
   return result;
 }
 
-b32 instanceSupportsPortability(const InstanceExtensionProperties *props) {
-  b32 result = false;
+bool instanceSupportsPortability(const InstanceExtensionProperties *props) {
+  bool result = false;
 
-  for (u32 i = 0; i < props->len; ++i) {
+  for (uint32_t i = 0; i < props->len; ++i) {
     VkExtensionProperties prop = props->items[i];
     if (SDL_strcmp(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
                    prop.extensionName) == 0) {
@@ -67,32 +66,26 @@ finally:
 
 typedef struct {
   const char **items;
-  u32 len;
-  b32 ok;
+  uint32_t len;
+  bool ok;
 } InstanceRequiredExtensions;
-static InstanceRequiredExtensions
-getInstanceRequiredExtensions(b32 validate, b32 portability) {
+static InstanceRequiredExtensions getInstanceRequiredExtensions(
+    bool validate, bool portability) {
   InstanceRequiredExtensions result = {0};
   // Validation
-  if (validate)
-    result.len += 1;
+  if (validate) result.len += 1;
   // SDL extensions
-  u32 sdlExtsCount;
+  uint32_t sdlExtsCount;
   const char *const *sdlExts = SDL_Vulkan_GetInstanceExtensions(&sdlExtsCount);
   result.len += sdlExtsCount;
-  if (portability)
-    result.len += 1;
+  if (portability) result.len += 1;
   // Populate array
   result.items = SDL_calloc(result.len, sizeof(const char *));
-  if (!result.items)
-    goto finally;
+  if (!result.items) goto finally;
   const char **it = result.items;
-  if (validate)
-    *(it++) = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
-  for (usize i = 0; i < sdlExtsCount; ++i)
-    *(it++) = sdlExts[i];
-  if (portability)
-    *(it++) = VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
+  if (validate) *(it++) = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
+  for (size_t i = 0; i < sdlExtsCount; ++i) *(it++) = sdlExts[i];
+  if (portability) *(it++) = VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
   result.ok = true;
   goto cleanup;
 cleanup:
@@ -103,8 +96,8 @@ finally:
 
 typedef struct {
   VkLayerProperties *items;
-  u32 len;
-  b32 ok;
+  uint32_t len;
+  bool ok;
 } InstanceLayerProperties;
 static InstanceLayerProperties enumerateInstanceLayerProperties() {
   InstanceLayerProperties result = {0};
@@ -113,8 +106,7 @@ static InstanceLayerProperties enumerateInstanceLayerProperties() {
     goto finally;
   }
   result.items = SDL_calloc(result.len, sizeof(VkLayerProperties));
-  if (!result.items)
-    goto finally;
+  if (!result.items) goto finally;
   if (vkEnumerateInstanceLayerProperties(&result.len, result.items)) {
     SDL_Log("Failed to enumerate instance layer properties");
     goto err_after_calloc_props;
@@ -130,18 +122,17 @@ finally:
 }
 
 static void findInstanceRequiredLayers(const InstanceLayerProperties *props,
-                                       u32 *pCount, const char **ppLayers) {
+                                       uint32_t *pCount,
+                                       const char **ppLayers) {
   *pCount = 0;
-  for (u32 i = 0; i < props->len; ++i) {
+  for (uint32_t i = 0; i < props->len; ++i) {
     VkLayerProperties prop = props->items[i];
     if (SDL_strcmp("VK_LAYER_KHRONOS_synchronization2", prop.layerName) == 0) {
-      if (ppLayers)
-        ppLayers[*pCount] = "VK_LAYER_KHRONOS_synchronization2";
+      if (ppLayers) ppLayers[*pCount] = "VK_LAYER_KHRONOS_synchronization2";
       ++(*pCount);
     } else if (SDL_strcmp("VK_LAYER_KHRONOS_timeline_semaphore",
                           prop.layerName) == 0) {
-      if (ppLayers)
-        ppLayers[*pCount] = "VK_LAYER_KHRONOS_timeline_semaphore";
+      if (ppLayers) ppLayers[*pCount] = "VK_LAYER_KHRONOS_timeline_semaphore";
       ++(*pCount);
     }
   }
@@ -149,25 +140,22 @@ static void findInstanceRequiredLayers(const InstanceLayerProperties *props,
 
 typedef struct {
   const char **items;
-  u32 len;
-  b32 ok;
+  uint32_t len;
+  bool ok;
 } InstanceRequiredLayers;
-InstanceRequiredLayers getInstanceRequiredLayers(b32 validate) {
+InstanceRequiredLayers getInstanceRequiredLayers(bool validate) {
   InstanceRequiredLayers result = {0};
   // Count extensions
-  if (validate)
-    ++result.len;
+  if (validate) ++result.len;
   InstanceLayerProperties props = enumerateInstanceLayerProperties();
-  u32 instLayersCount;
+  uint32_t instLayersCount;
   findInstanceRequiredLayers(&props, &instLayersCount, NULL);
   result.len += instLayersCount;
   // Populate extensions
   result.items = SDL_calloc(result.len, sizeof(const char *));
-  if (!result.items)
-    goto clean_layer_props;
+  if (!result.items) goto clean_layer_props;
   const char **it = result.items;
-  if (validate)
-    *(it++) = "VK_LAYER_KHRONOS_validation";
+  if (validate) *(it++) = "VK_LAYER_KHRONOS_validation";
   findInstanceRequiredLayers(&props, &instLayersCount, it);
   it += instLayersCount;
   // Done
@@ -178,18 +166,16 @@ finally:
   return result;
 }
 
-InstanceCreated instanceCreate(b32 validate) {
+InstanceCreated instanceCreate(bool validate) {
   InstanceCreated result = {0};
   // Instance extensions
   InstanceExtensionProperties props = enumerateInstanceExtensionProperties();
-  b32 portability = instanceSupportsPortability(&props);
+  bool portability = instanceSupportsPortability(&props);
   InstanceRequiredExtensions exts =
       getInstanceRequiredExtensions(validate, portability);
-  if (!exts.ok)
-    goto clean_ext_props;
+  if (!exts.ok) goto clean_ext_props;
   InstanceRequiredLayers layers = getInstanceRequiredLayers(validate);
-  if (!layers.ok)
-    goto clean_exts;
+  if (!layers.ok) goto clean_exts;
   VkApplicationInfo appInfo = {
       .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
       .pApplicationName = "MSC",

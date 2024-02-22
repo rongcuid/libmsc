@@ -7,7 +7,7 @@ typedef struct {
   VkPipelineLayout layout;
   struct {
     VkDescriptorSetLayout* items;
-    u32 len;
+    uint32_t len;
   } setLayouts;
   VkShaderModule vert;
   VkShaderModule frag;
@@ -15,7 +15,7 @@ typedef struct {
 
 typedef struct {
   NkPipeline value;
-  b32 ok;
+  bool ok;
 } NkPipelineCreated;
 NkPipelineCreated nkCreatePipeline(VkDevice device, VkPipelineCache cache,
                                    VkFormat format);
