@@ -23,7 +23,7 @@ package("sdl3")
 package_end()
 
 add_requires("unity_test ^2")
-add_requires("sdl3", {configs = {shared = true}})
+add_requires("sdl3", {configs = {shared = false}})
 add_requires("vulkansdk", {configs = {utils = {"volk"}}})
 add_requires("nuklear")
 add_requires("openmp")

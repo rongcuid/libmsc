@@ -1,6 +1,6 @@
 #include "nk_layer.h"
 
-#include <volk/volk.h>
+#include <volk.h>
 
 #include "pipeline.h"
 
