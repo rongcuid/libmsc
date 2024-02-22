@@ -1,6 +1,7 @@
 #include "instance.h"
 
 #include <SDL3/SDL_vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 ////// Instance creation
 
@@ -166,8 +167,11 @@ finally:
   return result;
 }
 
-InstanceCreated instanceCreate(bool validate) {
-  InstanceCreated result = {0};
+bool instanceCreate(VkInstance *pInstance, VkDebugUtilsMessengerEXT *pMessenger,
+                    bool validate) {
+  bool ok = false;
+  VkInstance instance = VK_NULL_HANDLE;
+  VkDebugUtilsMessengerEXT messenger = VK_NULL_HANDLE;
   // Instance extensions
   InstanceExtensionProperties props = enumerateInstanceExtensionProperties();
   bool portability = instanceSupportsPortability(&props);
@@ -209,21 +213,22 @@ InstanceCreated instanceCreate(bool validate) {
   if (validate) {
     ci.pNext = &debugCI;
   }
-  if (vkCreateInstance(&ci, NULL, &result.instance)) {
+  if (vkCreateInstance(&ci, NULL, &instance)) {
     goto err;
   }
-  volkLoadInstance(result.instance);
+  volkLoadInstance(instance);
   if (validate) {
-    if (vkCreateDebugUtilsMessengerEXT(result.instance, &debugCI, NULL,
-                                       &result.messenger)) {
+    if (vkCreateDebugUtilsMessengerEXT(instance, &debugCI, NULL, &messenger)) {
       goto err_after_instance;
     }
   }
-  result.ok = true;
+  ok = true;
+  *pInstance = instance;
+  *pMessenger = messenger;
   goto cleanup;
 err:
 err_after_instance:
-  vkDestroyInstance(result.instance, NULL);
+  vkDestroyInstance(instance, NULL);
 cleanup:
 clean_layers:
   SDL_free(layers.items);
@@ -232,5 +237,5 @@ clean_exts:
 clean_ext_props:
   SDL_free(props.items);
 finally:
-  return result;
+  return ok;
 }

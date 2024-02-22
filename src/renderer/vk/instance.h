@@ -2,9 +2,5 @@
 
 #include <volk.h>
 
-typedef struct {
-  VkInstance instance;
-  VkDebugUtilsMessengerEXT messenger;
-  bool ok;
-} InstanceCreated;
-InstanceCreated instanceCreate(bool validate);
+bool instanceCreate(VkInstance *pInstance, VkDebugUtilsMessengerEXT *pMessenger,
+                    bool validate);

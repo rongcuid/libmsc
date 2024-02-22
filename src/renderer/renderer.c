@@ -2,6 +2,7 @@
 
 #include <SDL3/SDL_vulkan.h>
 #include <volk.h>
+#include <vulkan/vulkan_core.h>
 
 #include "vk/device.h"
 #include "vk/instance.h"
@@ -25,15 +26,13 @@ bool rendererCreate(struct Renderer **ppRenderer, bool validate,
   bool ok = false;
   struct Renderer *pRenderer = SDL_malloc(sizeof(struct Renderer));
   if (!pRenderer) goto finally;
-  InstanceCreated inst = instanceCreate(validate);
-  if (!inst.ok) goto finally;
-  pRenderer->instance = inst.instance;
-  pRenderer->messenger = inst.messenger;
-  if (!SDL_Vulkan_CreateSurface(window, inst.instance, NULL,
+  if (!instanceCreate(&pRenderer->instance, &pRenderer->messenger, validate))
+    goto finally;
+  if (!SDL_Vulkan_CreateSurface(window, pRenderer->instance, NULL,
                                 &pRenderer->surface)) {
     goto clean_instance;
   }
-  DeviceCreated device = deviceCreate(inst.instance, pRenderer->surface);
+  DeviceCreated device = deviceCreate(pRenderer->instance, pRenderer->surface);
   if (!device.ok) {
     goto clean_surface;
   }
@@ -42,6 +41,7 @@ bool rendererCreate(struct Renderer **ppRenderer, bool validate,
   pRenderer->graphicsQueue = device.graphicsQueue;
   pRenderer->presentQueue = device.presentQueue;
 ok:
+  *ppRenderer = pRenderer;
   ok = true;
 clean_device:
   if (!ok) vkDestroyDevice(device.device, NULL);
@@ -49,14 +49,14 @@ clean_surface:
   if (!ok) vkDestroySurfaceKHR(pRenderer->instance, pRenderer->surface, NULL);
 clean_instance:
   if (!ok) {
-    if (inst.messenger != VK_NULL_HANDLE)
-      vkDestroyDebugUtilsMessengerEXT(inst.instance, inst.messenger, NULL);
-    vkDestroyInstance(inst.instance, NULL);
+    if (pRenderer->messenger != VK_NULL_HANDLE)
+      vkDestroyDebugUtilsMessengerEXT(pRenderer->instance, pRenderer->messenger,
+                                      NULL);
+    vkDestroyInstance(pRenderer->instance, NULL);
   }
 clean_malloc:
   if (!ok) SDL_free(pRenderer);
 finally:
-  *ppRenderer = pRenderer;
   return ok;
 }
 
