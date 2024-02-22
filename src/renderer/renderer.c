@@ -32,19 +32,16 @@ bool rendererCreate(struct Renderer **ppRenderer, bool validate,
                                 &pRenderer->surface)) {
     goto clean_instance;
   }
-  DeviceCreated device = deviceCreate(pRenderer->instance, pRenderer->surface);
-  if (!device.ok) {
+  if (!deviceCreate(&pRenderer->phy, &pRenderer->device,
+                    &pRenderer->graphicsQueue, &pRenderer->presentQueue,
+                    pRenderer->instance, pRenderer->surface)) {
     goto clean_surface;
   }
-  pRenderer->phy = device.phy;
-  pRenderer->device = device.device;
-  pRenderer->graphicsQueue = device.graphicsQueue;
-  pRenderer->presentQueue = device.presentQueue;
 ok:
   *ppRenderer = pRenderer;
   ok = true;
 clean_device:
-  if (!ok) vkDestroyDevice(device.device, NULL);
+  if (!ok) vkDestroyDevice(pRenderer->device, NULL);
 clean_surface:
   if (!ok) vkDestroySurfaceKHR(pRenderer->instance, pRenderer->surface, NULL);
 clean_instance:

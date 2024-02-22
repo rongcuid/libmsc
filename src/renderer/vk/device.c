@@ -286,28 +286,34 @@ finally:
   return result;
 }
 
-DeviceCreated deviceCreate(VkInstance instance, VkSurfaceKHR surface) {
-  DeviceCreated result = {0};
+bool deviceCreate(VkPhysicalDevice *pPhysicalDevice, VkDevice *pDevice,
+                  VkQueue *pGraphicsQueue, VkQueue *pPresentQueue,
+                  VkInstance instance, VkSurfaceKHR surface) {
+  bool ok = false;
+  VkPhysicalDevice physicalDevice = NULL;
+  VkDevice device = NULL;
+  VkQueue graphicsQueue = NULL;
+  VkQueue presentQueue = NULL;
   PhysicalDevices pdevs = enumeratePhysicalDevices(instance);
   if (!pdevs.ok) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                  "Failed to enumerate physical devices");
     goto finally;
   }
-  result.phy = pickDevices(pdevs.items, pdevs.len);
-  if (result.phy == VK_NULL_HANDLE) {
+  physicalDevice = pickDevices(pdevs.items, pdevs.len);
+  if (physicalDevice == VK_NULL_HANDLE) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No suitable device");
     goto clean_pdevs;
   }
   RequiredFeatures features;
   initRequiredFeatures(&features);
   setRequiredFeatures(&features);
-  DeviceQCIs qcis = getDeviceQCIs(result.phy, surface);
+  DeviceQCIs qcis = getDeviceQCIs(physicalDevice, surface);
   if (!qcis.ok) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No suitable queues");
     goto clean_pdevs;
   }
-  DeviceExtensions exts = getRequiredExtensions(result.phy);
+  DeviceExtensions exts = getRequiredExtensions(physicalDevice);
   VkDeviceCreateInfo ci = {
       .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
       .pNext = &features.features2,
@@ -318,17 +324,21 @@ DeviceCreated deviceCreate(VkInstance instance, VkSurfaceKHR surface) {
       .enabledExtensionCount = exts.len,
       .ppEnabledExtensionNames = exts.items,
   };
-  if (vkCreateDevice(result.phy, &ci, NULL, &result.device)) {
+  if (vkCreateDevice(physicalDevice, &ci, NULL, &device)) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create device");
     goto clean_exts;
   }
-  vkGetDeviceQueue(result.device, qcis.graphicsQFI, 0, &result.graphicsQueue);
-  vkGetDeviceQueue(result.device, qcis.presentQFI, 0, &result.presentQueue);
-  result.ok = true;
+  vkGetDeviceQueue(device, qcis.graphicsQFI, 0, &graphicsQueue);
+  vkGetDeviceQueue(device, qcis.presentQFI, 0, &presentQueue);
+  *pPhysicalDevice = physicalDevice;
+  *pDevice = device;
+  *pGraphicsQueue = graphicsQueue;
+  *pPresentQueue = presentQueue;
+  ok = true;
 clean_exts:
   SDL_free(exts.items);
 clean_pdevs:
   SDL_free(pdevs.items);
 finally:
-  return result;
+  return ok;
 }

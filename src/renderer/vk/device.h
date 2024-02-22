@@ -2,11 +2,6 @@
 
 #include <volk.h>
 
-typedef struct {
-  VkPhysicalDevice phy;
-  VkDevice device;
-  VkQueue graphicsQueue;
-  VkQueue presentQueue;
-  bool ok;
-} DeviceCreated;
-DeviceCreated deviceCreate(VkInstance instance, VkSurfaceKHR surface);
+bool deviceCreate(VkPhysicalDevice *pPhysicalDevice, VkDevice *pDevice,
+                  VkQueue *pGraphicsQueue, VkQueue *pPresentQueue,
+                  VkInstance instance, VkSurfaceKHR surface);
