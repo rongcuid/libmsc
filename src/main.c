@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
   }
   SDL_Window *window =
       SDL_CreateWindow("MSC", 1280, 720, SDL_WINDOW_VULKAN | SDL_WINDOW_HIDDEN);
-  Renderer *pRenderer;
+  struct Renderer *pRenderer;
   if (!rendererCreate(&pRenderer, true, window)) {
     SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "Failed to create renderer");
     return 1;

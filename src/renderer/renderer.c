@@ -20,9 +20,10 @@ struct Renderer {
   VkQueue presentQueue;
 };
 
-bool rendererCreate(Renderer **ppRenderer, bool validate, SDL_Window *window) {
+bool rendererCreate(struct Renderer **ppRenderer, bool validate,
+                    SDL_Window *window) {
   bool ok = false;
-  Renderer *pRenderer = SDL_malloc(sizeof(Renderer));
+  struct Renderer *pRenderer = SDL_malloc(sizeof(struct Renderer));
   if (!pRenderer) goto finally;
   InstanceCreated inst = instanceCreate(validate);
   if (!inst.ok) goto finally;
@@ -59,7 +60,7 @@ finally:
   return ok;
 }
 
-void rendererDestroy(Renderer *renderer) {
+void rendererDestroy(struct Renderer *renderer) {
   vkDestroyDevice(renderer->device, NULL);
   vkDestroySurfaceKHR(renderer->instance, renderer->surface, NULL);
   if (renderer->messenger != VK_NULL_HANDLE)
