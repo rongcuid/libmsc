@@ -20,43 +20,43 @@ struct Renderer {
   VkQueue presentQueue;
 };
 
-RendererCreated rendererCreate(bool validate, SDL_Window *window) {
-  RendererCreated result = {0};
-  result.value = SDL_malloc(sizeof(Renderer));
-  if (!result.value) goto finally;
+bool rendererCreate(Renderer **ppRenderer, bool validate, SDL_Window *window) {
+  bool ok = false;
+  Renderer *pRenderer = SDL_malloc(sizeof(Renderer));
+  if (!pRenderer) goto finally;
   InstanceCreated inst = instanceCreate(validate);
   if (!inst.ok) goto finally;
-  result.value->instance = inst.instance;
-  result.value->messenger = inst.messenger;
+  pRenderer->instance = inst.instance;
+  pRenderer->messenger = inst.messenger;
   if (!SDL_Vulkan_CreateSurface(window, inst.instance, NULL,
-                                &result.value->surface)) {
+                                &pRenderer->surface)) {
     goto clean_instance;
   }
-  DeviceCreated device = deviceCreate(inst.instance, result.value->surface);
+  DeviceCreated device = deviceCreate(inst.instance, pRenderer->surface);
   if (!device.ok) {
     goto clean_surface;
   }
-  result.value->phy = device.phy;
-  result.value->device = device.device;
-  result.value->graphicsQueue = device.graphicsQueue;
-  result.value->presentQueue = device.presentQueue;
+  pRenderer->phy = device.phy;
+  pRenderer->device = device.device;
+  pRenderer->graphicsQueue = device.graphicsQueue;
+  pRenderer->presentQueue = device.presentQueue;
 ok:
-  result.ok = true;
+  ok = true;
 clean_device:
-  if (!result.ok) vkDestroyDevice(device.device, NULL);
+  if (!ok) vkDestroyDevice(device.device, NULL);
 clean_surface:
-  if (!result.ok)
-    vkDestroySurfaceKHR(result.value->instance, result.value->surface, NULL);
+  if (!ok) vkDestroySurfaceKHR(pRenderer->instance, pRenderer->surface, NULL);
 clean_instance:
-  if (!result.ok) {
+  if (!ok) {
     if (inst.messenger != VK_NULL_HANDLE)
       vkDestroyDebugUtilsMessengerEXT(inst.instance, inst.messenger, NULL);
     vkDestroyInstance(inst.instance, NULL);
   }
 clean_malloc:
-  if (!result.ok) SDL_free(result.value);
+  if (!ok) SDL_free(pRenderer);
 finally:
-  return result;
+  *ppRenderer = pRenderer;
+  return ok;
 }
 
 void rendererDestroy(Renderer *renderer) {
