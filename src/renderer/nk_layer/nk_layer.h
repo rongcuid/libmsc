@@ -1,12 +1,10 @@
 #pragma once
 
+#include <msc_arena.h>
 #include <volk.h>
 
-typedef struct NkLayer NkLayer;
+typedef struct NkLayer_T *NkLayer;
 
-typedef struct {
-  NkLayer *value;
-  bool ok;
-} NkLayerCreated;
-NkLayerCreated nkLayerCreate(VkDevice device, VkPipelineCache cache,
-                             VkSurfaceKHR surface);
+bool createNkLayer(NkLayer *pLayer, VkDevice device, VkPipelineCache cache,
+                   VkFormat format, struct msca scratch);
+void destroyNkLayer(NkLayer layer);

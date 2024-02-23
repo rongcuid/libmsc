@@ -4,7 +4,9 @@
 #include <volk.h>
 
 struct NkPipeline {
+  VkDevice device;
   VkPipeline pipeline;
+  VkFormat format;
   VkPipelineLayout layout;
   struct {
     uint32_t len;
@@ -14,5 +16,7 @@ struct NkPipeline {
   VkShaderModule frag;
 };
 
-bool nkCreatePipeline(VkDevice device, VkPipelineCache cache, VkFormat format,
-                      struct msca scratch, struct NkPipeline* pPipeline);
+bool initNkPipeline(struct NkPipeline* pipeline, VkDevice device,
+                    VkPipelineCache cache, VkFormat format,
+                    struct msca scratch);
+void deinitNkPipeline(struct NkPipeline* pPipeline);

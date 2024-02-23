@@ -253,14 +253,17 @@ finally:
   return result.ok;
 }
 
-bool nkCreatePipeline(VkDevice device, VkPipelineCache cache, VkFormat format,
-                      struct msca scratch, struct NkPipeline *pPipeline) {
+bool initNkPipeline(struct NkPipeline *pipeline, VkDevice device,
+                    VkPipelineCache cache, VkFormat format,
+                    struct msca scratch) {
   struct {
     struct NkPipeline value;
     bool ok;
   } result = {0};
   struct msca tmp;
   msca_half(&scratch, &tmp);
+  result.value.device = device;
+  result.value.format = format;
   struct {
     VkShaderModule vertModule, fragModule;
     uint32_t len;
@@ -304,7 +307,7 @@ bool nkCreatePipeline(VkDevice device, VkPipelineCache cache, VkFormat format,
     goto clean_layout;
   }
   result.ok = true;
-  *pPipeline = result.value;
+  *pipeline = result.value;
 clean_layout:
   if (!result.ok) vkDestroyPipelineLayout(device, result.value.layout, NULL);
 clean_dslayout:
@@ -319,4 +322,15 @@ clean_stages:
   }
 finally:
   return result.ok;
+}
+
+void deinitNkPipeline(struct NkPipeline *pipeline) {
+  vkDestroyPipeline(pipeline->device, pipeline->pipeline, NULL);
+  vkDestroyPipelineLayout(pipeline->device, pipeline->layout, NULL);
+  for (uint32_t i = 0; i < pipeline->setLayouts.len; ++i) {
+    vkDestroyDescriptorSetLayout(pipeline->device,
+                                 pipeline->setLayouts.items[i], NULL);
+  }
+  vkDestroyShaderModule(pipeline->device, pipeline->vert, NULL);
+  vkDestroyShaderModule(pipeline->device, pipeline->frag, NULL);
 }
