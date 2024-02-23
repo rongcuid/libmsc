@@ -67,7 +67,7 @@ finally:
 
 static bool getInstanceRequiredExtensions(bool validate, bool portability,
                                           struct msc_arena *up,
-                                          uint32_t *pExtensionsCount,
+                                          uint32_t *pExtensionCount,
                                           const char ***pppExtensions) {
   struct {
     uint32_t len;
@@ -83,7 +83,6 @@ static bool getInstanceRequiredExtensions(bool validate, bool portability,
   result.len += sdlExtsCount;
   if (portability) result.len += 1;
   // Populate array
-  // result.items = SDL_calloc(result.len, sizeof(const char *));
   result.items = msc_arena_alloc(up, alignof(const char *), result.len,
                                  sizeof(const char *));
   if (!result.items) goto finally;
@@ -93,46 +92,49 @@ static bool getInstanceRequiredExtensions(bool validate, bool portability,
   if (portability) *(it++) = VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
 ok:
   ok = true;
-  *pExtensionsCount = result.len;
+  *pExtensionCount = result.len;
   *pppExtensions = result.items;
 finally:
   if (!ok) msc_arena_rewind(up, cp);
   return ok;
 }
 
-typedef struct {
-  VkLayerProperties *items;
-  uint32_t len;
-  bool ok;
-} InstanceLayerProperties;
-static InstanceLayerProperties enumerateInstanceLayerProperties() {
-  InstanceLayerProperties result = {0};
+static bool enumerateInstanceLayerProperties(struct msc_arena *up,
+                                             uint32_t *pItemCount,
+                                             VkLayerProperties **ppItems) {
+  struct {
+    uint32_t len;
+    VkLayerProperties *items;
+  } result = {0};
+  bool ok = false;
+  msc_arena_checkpoint_t cp = msc_arena_checkpoint(up);
   if (vkEnumerateInstanceLayerProperties(&result.len, NULL)) {
     SDL_Log("Failed to enumerate count of instance layer properties");
     goto finally;
   }
-  result.items = SDL_calloc(result.len, sizeof(VkLayerProperties));
+  result.items = msc_arena_alloc(up, alignof(VkLayerProperties), result.len,
+                                 sizeof(VkLayerProperties));
   if (!result.items) goto finally;
   if (vkEnumerateInstanceLayerProperties(&result.len, result.items)) {
     SDL_Log("Failed to enumerate instance layer properties");
-    goto err_after_calloc_props;
+    goto finally;
   }
-  // Done
-  result.ok = true;
-  goto finally;
-err_after_calloc_props:
-  SDL_free(result.items);
-  goto finally;
+ok:
+  ok = true;
+  *pItemCount = result.len;
+  *ppItems = result.items;
 finally:
-  return result;
+  if (!ok) msc_arena_rewind(up, cp);
+  return ok;
 }
 
-static void findInstanceRequiredLayers(const InstanceLayerProperties *props,
+static void findInstanceRequiredLayers(uint32_t propCount,
+                                       VkLayerProperties *pProps,
                                        uint32_t *pCount,
                                        const char **ppLayers) {
   *pCount = 0;
-  for (uint32_t i = 0; i < props->len; ++i) {
-    VkLayerProperties prop = props->items[i];
+  for (uint32_t i = 0; i < propCount; ++i) {
+    VkLayerProperties prop = pProps[i];
     if (SDL_strcmp("VK_LAYER_KHRONOS_synchronization2", prop.layerName) == 0) {
       if (ppLayers) ppLayers[*pCount] = "VK_LAYER_KHRONOS_synchronization2";
       ++(*pCount);
@@ -144,32 +146,40 @@ static void findInstanceRequiredLayers(const InstanceLayerProperties *props,
   }
 }
 
-typedef struct {
-  const char **items;
-  uint32_t len;
-  bool ok;
-} InstanceRequiredLayers;
-InstanceRequiredLayers getInstanceRequiredLayers(bool validate) {
-  InstanceRequiredLayers result = {0};
+bool getInstanceRequiredLayers(bool validate, struct msc_arena *up,
+                               uint32_t *pLayerCount, const char ***pppLayers) {
+  struct {
+    uint32_t len;
+    const char **items;
+  } result = {0};
+  bool ok = false;
+  msc_arena_checkpoint_t cp = msc_arena_checkpoint(up);
   // Count extensions
   if (validate) ++result.len;
-  InstanceLayerProperties props = enumerateInstanceLayerProperties();
+  struct {
+    uint32_t len;
+    VkLayerProperties *items;
+  } props;
+  if (!enumerateInstanceLayerProperties(up, &props.len, &props.items))
+    goto finally;
   uint32_t instLayersCount;
-  findInstanceRequiredLayers(&props, &instLayersCount, NULL);
+  findInstanceRequiredLayers(props.len, props.items, &instLayersCount, NULL);
   result.len += instLayersCount;
   // Populate extensions
-  result.items = SDL_calloc(result.len, sizeof(const char *));
-  if (!result.items) goto clean_layer_props;
+  result.items = msc_arena_alloc(up, alignof(const char *), result.len,
+                                 sizeof(const char *));
+  if (!result.items) goto finally;
   const char **it = result.items;
   if (validate) *(it++) = "VK_LAYER_KHRONOS_validation";
-  findInstanceRequiredLayers(&props, &instLayersCount, it);
+  findInstanceRequiredLayers(props.len, props.items, &instLayersCount, it);
   it += instLayersCount;
-  // Done
-  result.ok = true;
-clean_layer_props:
-  SDL_free(props.items);
+ok:
+  ok = true;
+  *pLayerCount = result.len;
+  *pppLayers = result.items;
 finally:
-  return result;
+  if (!ok) msc_arena_rewind(up, cp);
+  return ok;
 }
 
 bool initInstance(struct Instance *pInstance, bool validate,
@@ -194,8 +204,13 @@ bool initInstance(struct Instance *pInstance, bool validate,
   if (!getInstanceRequiredExtensions(validate, portability, &scratch, &exts.len,
                                      &exts.items))
     goto finally;
-  InstanceRequiredLayers layers = getInstanceRequiredLayers(validate);
-  if (!layers.ok) goto finally;
+  struct {
+    uint32_t len;
+    const char **items;
+  } layers;
+  if (!getInstanceRequiredLayers(validate, &scratch, &layers.len,
+                                 &layers.items))
+    goto finally;
   VkApplicationInfo appInfo = {
       .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
       .pApplicationName = "MSC",
@@ -230,24 +245,19 @@ bool initInstance(struct Instance *pInstance, bool validate,
     ci.pNext = &debugCI;
   }
   if (vkCreateInstance(&ci, NULL, &instance)) {
-    goto err;
+    goto finally;
   }
   volkLoadInstance(instance);
   if (validate) {
     if (vkCreateDebugUtilsMessengerEXT(instance, &debugCI, NULL, &messenger)) {
-      goto err_after_instance;
+      goto clean_instance;
     }
   }
   ok = true;
   pInstance->instance = instance;
   pInstance->messenger = messenger;
-  goto cleanup;
-err:
-err_after_instance:
-  vkDestroyInstance(instance, NULL);
-cleanup:
-clean_layers:
-  SDL_free(layers.items);
+clean_instance:
+  if (!ok) vkDestroyInstance(instance, NULL);
 finally:
   return ok;
 }
