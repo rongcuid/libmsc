@@ -2,6 +2,12 @@
 
 #include <volk.h>
 
-bool deviceCreate(VkPhysicalDevice *pPhysicalDevice, VkDevice *pDevice,
-                  VkQueue *pGraphicsQueue, VkQueue *pPresentQueue,
-                  VkInstance instance, VkSurfaceKHR surface);
+struct Device {
+  VkPhysicalDevice physical;
+  VkDevice device;
+  VkQueue graphicsQueue;
+  VkQueue presentQueue;
+};
+
+bool createDevice(struct Device *pDevice, VkInstance instance,
+                  VkSurfaceKHR surface);

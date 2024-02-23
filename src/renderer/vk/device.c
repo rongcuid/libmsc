@@ -280,34 +280,31 @@ finally:
   return result;
 }
 
-bool deviceCreate(VkPhysicalDevice *pPhysicalDevice, VkDevice *pDevice,
-                  VkQueue *pGraphicsQueue, VkQueue *pPresentQueue,
-                  VkInstance instance, VkSurfaceKHR surface) {
+bool createDevice(struct Device *pDevice, VkInstance instance,
+                  VkSurfaceKHR surface) {
   bool ok = false;
-  VkPhysicalDevice physicalDevice = NULL;
-  VkDevice device = NULL;
-  VkQueue graphicsQueue = NULL;
-  VkQueue presentQueue = NULL;
+  struct Device device = {0};
+  //
   PhysicalDevices pdevs = enumeratePhysicalDevices(instance);
   if (!pdevs.ok) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                  "Failed to enumerate physical devices");
     goto finally;
   }
-  physicalDevice = pickDevices(pdevs.items, pdevs.len);
-  if (physicalDevice == VK_NULL_HANDLE) {
+  device.physical = pickDevices(pdevs.items, pdevs.len);
+  if (device.physical == VK_NULL_HANDLE) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No suitable device");
     goto clean_pdevs;
   }
   RequiredFeatures features;
   initRequiredFeatures(&features);
   setRequiredFeatures(&features);
-  DeviceQCIs qcis = getDeviceQCIs(physicalDevice, surface);
+  DeviceQCIs qcis = getDeviceQCIs(device.physical, surface);
   if (!qcis.ok) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No suitable queues");
     goto clean_pdevs;
   }
-  DeviceExtensions exts = getRequiredExtensions(physicalDevice);
+  DeviceExtensions exts = getRequiredExtensions(device.physical);
   VkDeviceCreateInfo ci = {
       .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
       .pNext = &features.features2,
@@ -318,16 +315,14 @@ bool deviceCreate(VkPhysicalDevice *pPhysicalDevice, VkDevice *pDevice,
       .enabledExtensionCount = exts.len,
       .ppEnabledExtensionNames = exts.items,
   };
-  if (vkCreateDevice(physicalDevice, &ci, NULL, &device)) {
+  if (vkCreateDevice(device.physical, &ci, NULL, &device.device)) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create device");
     goto clean_exts;
   }
-  vkGetDeviceQueue(device, qcis.graphicsQFI, 0, &graphicsQueue);
-  vkGetDeviceQueue(device, qcis.presentQFI, 0, &presentQueue);
-  *pPhysicalDevice = physicalDevice;
+  vkGetDeviceQueue(device.device, qcis.graphicsQFI, 0, &device.graphicsQueue);
+  vkGetDeviceQueue(device.device, qcis.presentQFI, 0, &device.presentQueue);
+success:
   *pDevice = device;
-  *pGraphicsQueue = graphicsQueue;
-  *pPresentQueue = presentQueue;
   ok = true;
 clean_exts:
   SDL_free(exts.items);

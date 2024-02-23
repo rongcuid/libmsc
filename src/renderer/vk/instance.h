@@ -2,5 +2,9 @@
 
 #include <volk.h>
 
-bool instanceCreate(VkInstance *pInstance, VkDebugUtilsMessengerEXT *pMessenger,
-                    bool validate);
+struct Instance {
+  VkInstance instance;
+  VkDebugUtilsMessengerEXT messenger;
+};
+
+bool createInstance(struct Instance *pInstance, bool validate);

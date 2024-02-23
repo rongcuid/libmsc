@@ -167,8 +167,7 @@ finally:
   return result;
 }
 
-bool instanceCreate(VkInstance *pInstance, VkDebugUtilsMessengerEXT *pMessenger,
-                    bool validate) {
+bool createInstance(struct Instance *pInstance, bool validate) {
   bool ok = false;
   VkInstance instance = VK_NULL_HANDLE;
   VkDebugUtilsMessengerEXT messenger = VK_NULL_HANDLE;
@@ -223,8 +222,8 @@ bool instanceCreate(VkInstance *pInstance, VkDebugUtilsMessengerEXT *pMessenger,
     }
   }
   ok = true;
-  *pInstance = instance;
-  *pMessenger = messenger;
+  pInstance->instance = instance;
+  pInstance->messenger = messenger;
   goto cleanup;
 err:
 err_after_instance:
