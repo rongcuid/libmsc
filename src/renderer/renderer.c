@@ -18,16 +18,17 @@ struct Renderer_T {
 };
 
 bool createRenderer(Renderer *pRenderer, bool validate, SDL_Window *window) {
+  SDL_Log("Creating renderer");
   bool ok = false;
   Renderer renderer = SDL_malloc(sizeof(struct Renderer_T));
   if (!renderer) goto finally;
-  if (!createInstance(&renderer->instance, validate)) goto finally;
+  if (!initInstance(&renderer->instance, validate)) goto finally;
   if (!SDL_Vulkan_CreateSurface(window, renderer->instance.instance, NULL,
                                 &renderer->surface)) {
     goto clean_instance;
   }
-  if (!createDevice(&renderer->device, renderer->instance.instance,
-                    renderer->surface)) {
+  if (!initDevice(&renderer->device, renderer->instance.instance,
+                  renderer->surface)) {
     goto clean_surface;
   }
 ok:
@@ -52,11 +53,9 @@ finally:
 }
 
 void destroyRenderer(Renderer renderer) {
-  vkDestroyDevice(renderer->device.device, NULL);
+  SDL_Log("Destroying renderer");
+  deinitDevice(&renderer->device);
   vkDestroySurfaceKHR(renderer->instance.instance, renderer->surface, NULL);
-  if (renderer->instance.messenger != VK_NULL_HANDLE)
-    vkDestroyDebugUtilsMessengerEXT(renderer->instance.instance,
-                                    renderer->instance.messenger, NULL);
-  vkDestroyInstance(renderer->instance.instance, NULL);
+  deinitInstance(&renderer->instance);
   SDL_free(renderer);
 }

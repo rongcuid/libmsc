@@ -280,8 +280,9 @@ finally:
   return result;
 }
 
-bool createDevice(struct Device *pDevice, VkInstance instance,
-                  VkSurfaceKHR surface) {
+bool initDevice(struct Device *pDevice, VkInstance instance,
+                VkSurfaceKHR surface) {
+  SDL_Log("Initializing Vulkan device");
   bool ok = false;
   struct Device device = {0};
   //
@@ -330,4 +331,10 @@ clean_pdevs:
   SDL_free(pdevs.items);
 finally:
   return ok;
+}
+
+void deinitDevice(struct Device *pDevice) {
+  SDL_Log("Deinitializing Vulkan device");
+  vkDestroyDevice(pDevice->device, NULL);
+  *pDevice = (struct Device){0};
 }

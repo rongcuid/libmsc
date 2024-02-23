@@ -9,5 +9,6 @@ struct Device {
   VkQueue presentQueue;
 };
 
-bool createDevice(struct Device *pDevice, VkInstance instance,
-                  VkSurfaceKHR surface);
+bool initDevice(struct Device *pDevice, VkInstance instance,
+                VkSurfaceKHR surface);
+void deinitDevice(struct Device *pDevice);

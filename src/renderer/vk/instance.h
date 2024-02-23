@@ -7,4 +7,5 @@ struct Instance {
   VkDebugUtilsMessengerEXT messenger;
 };
 
-bool createInstance(struct Instance *pInstance, bool validate);
+bool initInstance(struct Instance *pInstance, bool validate);
+void deinitInstance(struct Instance *pInstance);

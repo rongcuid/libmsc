@@ -167,7 +167,8 @@ finally:
   return result;
 }
 
-bool createInstance(struct Instance *pInstance, bool validate) {
+bool initInstance(struct Instance *pInstance, bool validate) {
+  SDL_Log("Initializing Vulkan instance");
   bool ok = false;
   VkInstance instance = VK_NULL_HANDLE;
   VkDebugUtilsMessengerEXT messenger = VK_NULL_HANDLE;
@@ -237,4 +238,13 @@ clean_ext_props:
   SDL_free(props.items);
 finally:
   return ok;
+}
+
+void deinitInstance(struct Instance *pInstance) {
+  SDL_Log("Deinitializing Vulkan instance");
+  if (pInstance->messenger != VK_NULL_HANDLE)
+    vkDestroyDebugUtilsMessengerEXT(pInstance->instance, pInstance->messenger,
+                                    NULL);
+  vkDestroyInstance(pInstance->instance, NULL);
+  *pInstance = (struct Instance){0};
 }
