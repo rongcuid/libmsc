@@ -139,9 +139,14 @@ static void summarizeDevice(VkPhysicalDevice phy) {
           : "-");
 }
 
+static int compareDevice(const void *a, const void *b) {
+  const VkPhysicalDevice *pa = a;
+  const VkPhysicalDevice *pb = b;
+  return deviceRank(*pa) - deviceRank(*pb);
+}
+
 VkPhysicalDevice pickDevices(VkPhysicalDevice *pDevices, uint32_t len) {
-  // mscalg_qsort(pDevices, len, sizeof(VkPhysicalDevice), &compareDevice,
-  // NULL);
+  SDL_qsort(pDevices, len, sizeof(VkPhysicalDevice), &compareDevice);
   for (uint32_t i = 0; i < len; ++i) {
     summarizeDevice(pDevices[i]);
     RequiredFeatures features;
