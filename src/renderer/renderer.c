@@ -30,7 +30,8 @@ bool createRenderer(Renderer *pRenderer, bool validate, SDL_Window *window) {
   renderer->scratch_memory = SDL_malloc(SCRATCH_SIZE);
   if (!renderer->scratch_memory) goto clean_renderer;
   msc_arena_init(&renderer->scratch, renderer->scratch_memory, SCRATCH_SIZE);
-  if (!initInstance(&renderer->instance, validate)) goto clean_scratch;
+  if (!initInstance(&renderer->instance, validate, renderer->scratch))
+    goto clean_scratch;
   if (!SDL_Vulkan_CreateSurface(window, renderer->instance.instance, NULL,
                                 &renderer->surface)) {
     goto clean_instance;

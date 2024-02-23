@@ -1,5 +1,6 @@
 #pragma once
 
+#include <msc_arena.h>
 #include <volk.h>
 
 struct Instance {
@@ -7,5 +8,6 @@ struct Instance {
   VkDebugUtilsMessengerEXT messenger;
 };
 
-bool initInstance(struct Instance *pInstance, bool validate);
+bool initInstance(struct Instance *pInstance, bool validate,
+                  struct msc_arena scratch);
 void deinitInstance(struct Instance *pInstance);

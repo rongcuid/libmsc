@@ -30,3 +30,13 @@ exit_param:;
 finally:
   return ptr;
 }
+msc_arena_checkpoint_t msc_arena_checkpoint(const struct msc_arena *arena) {
+  return (msc_arena_checkpoint_t){
+      .begin = arena->begin,
+  };
+}
+
+void msc_arena_rewind(struct msc_arena *arena,
+                      msc_arena_checkpoint_t checkpoint) {
+  arena->begin = checkpoint.begin;
+}

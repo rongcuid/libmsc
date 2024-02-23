@@ -24,37 +24,37 @@ static VkBool32 debugCallback(
   return VK_FALSE;
 }
 
-typedef struct {
-  VkExtensionProperties *items;
+static bool enumerateInstanceExtensionProperties(
+    uint32_t *pLen, VkExtensionProperties **ppProps, struct msc_arena *up) {
+  bool ok = false;
   uint32_t len;
-  bool ok;
-} InstanceExtensionProperties;
-static InstanceExtensionProperties enumerateInstanceExtensionProperties() {
-  InstanceExtensionProperties result = {0};
-  if (vkEnumerateInstanceExtensionProperties(NULL, &result.len, NULL)) {
+  msc_arena_checkpoint_t cp = msc_arena_checkpoint(up);
+  VkExtensionProperties *pProps;
+  if (vkEnumerateInstanceExtensionProperties(NULL, &len, NULL)) {
     SDL_Log("Failed to enumerate count of instance extension properties");
     goto finally;
   }
-  result.items = SDL_calloc(result.len, sizeof(VkExtensionProperties));
-  if (!result.items) goto finally;
-  if (vkEnumerateInstanceExtensionProperties(NULL, &result.len, result.items)) {
+  pProps = msc_arena_alloc(up, alignof(*pProps), len, sizeof(*pProps));
+  if (!pProps) goto finally;
+  if (vkEnumerateInstanceExtensionProperties(NULL, &len, pProps)) {
     SDL_Log("Failed to enumerate instance extension properties");
-    goto err_after_calloc_props;
+    goto finally;
   }
-  result.ok = true;
-  goto finally;
-err_after_calloc_props:
-  SDL_free(result.items);
-  goto finally;
+ok:
+  ok = true;
+  *pLen = len;
+  *ppProps = pProps;
 finally:
-  return result;
+  if (!ok) msc_arena_rewind(up, cp);
+  return ok;
 }
 
-bool instanceSupportsPortability(const InstanceExtensionProperties *props) {
+bool instanceSupportsPortability(uint32_t propsCount,
+                                 const VkExtensionProperties *pProps) {
   bool result = false;
 
-  for (uint32_t i = 0; i < props->len; ++i) {
-    VkExtensionProperties prop = props->items[i];
+  for (uint32_t i = 0; i < propsCount; ++i) {
+    VkExtensionProperties prop = pProps[i];
     if (SDL_strcmp(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
                    prop.extensionName) == 0) {
       result = true;
@@ -167,17 +167,25 @@ finally:
   return result;
 }
 
-bool initInstance(struct Instance *pInstance, bool validate) {
+bool initInstance(struct Instance *pInstance, bool validate,
+                  struct msc_arena scratch) {
   SDL_Log("Initializing Vulkan instance");
   bool ok = false;
   VkInstance instance = VK_NULL_HANDLE;
   VkDebugUtilsMessengerEXT messenger = VK_NULL_HANDLE;
   // Instance extensions
-  InstanceExtensionProperties props = enumerateInstanceExtensionProperties();
-  bool portability = instanceSupportsPortability(&props);
+  struct {
+    uint32_t len;
+    VkExtensionProperties *items;
+  } props;
+  if (!enumerateInstanceExtensionProperties(&props.len, &props.items,
+                                            &scratch)) {
+    goto finally;
+  }
+  bool portability = instanceSupportsPortability(props.len, props.items);
   InstanceRequiredExtensions exts =
       getInstanceRequiredExtensions(validate, portability);
-  if (!exts.ok) goto clean_ext_props;
+  if (!exts.ok) goto finally;
   InstanceRequiredLayers layers = getInstanceRequiredLayers(validate);
   if (!layers.ok) goto clean_exts;
   VkApplicationInfo appInfo = {
@@ -234,8 +242,6 @@ clean_layers:
   SDL_free(layers.items);
 clean_exts:
   SDL_free(exts.items);
-clean_ext_props:
-  SDL_free(props.items);
 finally:
   return ok;
 }
