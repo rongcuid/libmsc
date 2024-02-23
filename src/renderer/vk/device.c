@@ -1,7 +1,5 @@
 #include "device.h"
 
-#include "msc_alg.h"
-
 typedef struct {
   VkPhysicalDevice *items;
   uint32_t len;
