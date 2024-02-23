@@ -65,14 +65,16 @@ finally:
   return result;
 }
 
-typedef struct {
-  const char **items;
-  uint32_t len;
-  bool ok;
-} InstanceRequiredExtensions;
-static InstanceRequiredExtensions getInstanceRequiredExtensions(
-    bool validate, bool portability) {
-  InstanceRequiredExtensions result = {0};
+static bool getInstanceRequiredExtensions(bool validate, bool portability,
+                                          struct msc_arena *up,
+                                          uint32_t *pExtensionsCount,
+                                          const char ***pppExtensions) {
+  struct {
+    uint32_t len;
+    const char **items;
+  } result = {0};
+  bool ok = false;
+  msc_arena_checkpoint_t cp = msc_arena_checkpoint(up);
   // Validation
   if (validate) result.len += 1;
   // SDL extensions
@@ -81,18 +83,21 @@ static InstanceRequiredExtensions getInstanceRequiredExtensions(
   result.len += sdlExtsCount;
   if (portability) result.len += 1;
   // Populate array
-  result.items = SDL_calloc(result.len, sizeof(const char *));
+  // result.items = SDL_calloc(result.len, sizeof(const char *));
+  result.items = msc_arena_alloc(up, alignof(const char *), result.len,
+                                 sizeof(const char *));
   if (!result.items) goto finally;
   const char **it = result.items;
   if (validate) *(it++) = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
   for (size_t i = 0; i < sdlExtsCount; ++i) *(it++) = sdlExts[i];
   if (portability) *(it++) = VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
-  result.ok = true;
-  goto cleanup;
-cleanup:
-
+ok:
+  ok = true;
+  *pExtensionsCount = result.len;
+  *pppExtensions = result.items;
 finally:
-  return result;
+  if (!ok) msc_arena_rewind(up, cp);
+  return ok;
 }
 
 typedef struct {
@@ -178,16 +183,19 @@ bool initInstance(struct Instance *pInstance, bool validate,
     uint32_t len;
     VkExtensionProperties *items;
   } props;
-  if (!enumerateInstanceExtensionProperties(&props.len, &props.items,
-                                            &scratch)) {
+  if (!enumerateInstanceExtensionProperties(&props.len, &props.items, &scratch))
     goto finally;
-  }
+
   bool portability = instanceSupportsPortability(props.len, props.items);
-  InstanceRequiredExtensions exts =
-      getInstanceRequiredExtensions(validate, portability);
-  if (!exts.ok) goto finally;
+  struct {
+    uint32_t len;
+    const char **items;
+  } exts;
+  if (!getInstanceRequiredExtensions(validate, portability, &scratch, &exts.len,
+                                     &exts.items))
+    goto finally;
   InstanceRequiredLayers layers = getInstanceRequiredLayers(validate);
-  if (!layers.ok) goto clean_exts;
+  if (!layers.ok) goto finally;
   VkApplicationInfo appInfo = {
       .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
       .pApplicationName = "MSC",
@@ -240,8 +248,6 @@ err_after_instance:
 cleanup:
 clean_layers:
   SDL_free(layers.items);
-clean_exts:
-  SDL_free(exts.items);
 finally:
   return ok;
 }
