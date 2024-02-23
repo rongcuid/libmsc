@@ -11,7 +11,7 @@
 
 ////// Renderer
 
-struct Renderer {
+struct Renderer_T {
   VkInstance instance;
   VkDebugUtilsMessengerEXT messenger;
   VkSurfaceKHR surface;
@@ -21,43 +21,42 @@ struct Renderer {
   VkQueue presentQueue;
 };
 
-bool rendererCreate(struct Renderer **ppRenderer, bool validate,
-                    SDL_Window *window) {
+bool createRenderer(Renderer *pRenderer, bool validate, SDL_Window *window) {
   bool ok = false;
-  struct Renderer *pRenderer = SDL_malloc(sizeof(struct Renderer));
-  if (!pRenderer) goto finally;
-  if (!instanceCreate(&pRenderer->instance, &pRenderer->messenger, validate))
+  Renderer renderer = SDL_malloc(sizeof(struct Renderer_T));
+  if (!renderer) goto finally;
+  if (!instanceCreate(&renderer->instance, &renderer->messenger, validate))
     goto finally;
-  if (!SDL_Vulkan_CreateSurface(window, pRenderer->instance, NULL,
-                                &pRenderer->surface)) {
+  if (!SDL_Vulkan_CreateSurface(window, renderer->instance, NULL,
+                                &renderer->surface)) {
     goto clean_instance;
   }
-  if (!deviceCreate(&pRenderer->phy, &pRenderer->device,
-                    &pRenderer->graphicsQueue, &pRenderer->presentQueue,
-                    pRenderer->instance, pRenderer->surface)) {
+  if (!deviceCreate(&renderer->phy, &renderer->device, &renderer->graphicsQueue,
+                    &renderer->presentQueue, renderer->instance,
+                    renderer->surface)) {
     goto clean_surface;
   }
 ok:
-  *ppRenderer = pRenderer;
+  *pRenderer = renderer;
   ok = true;
 clean_device:
-  if (!ok) vkDestroyDevice(pRenderer->device, NULL);
+  if (!ok) vkDestroyDevice(renderer->device, NULL);
 clean_surface:
-  if (!ok) vkDestroySurfaceKHR(pRenderer->instance, pRenderer->surface, NULL);
+  if (!ok) vkDestroySurfaceKHR(renderer->instance, renderer->surface, NULL);
 clean_instance:
   if (!ok) {
-    if (pRenderer->messenger != VK_NULL_HANDLE)
-      vkDestroyDebugUtilsMessengerEXT(pRenderer->instance, pRenderer->messenger,
+    if (renderer->messenger != VK_NULL_HANDLE)
+      vkDestroyDebugUtilsMessengerEXT(renderer->instance, renderer->messenger,
                                       NULL);
-    vkDestroyInstance(pRenderer->instance, NULL);
+    vkDestroyInstance(renderer->instance, NULL);
   }
 clean_malloc:
-  if (!ok) SDL_free(pRenderer);
+  if (!ok) SDL_free(renderer);
 finally:
   return ok;
 }
 
-void rendererDestroy(struct Renderer *renderer) {
+void destroyRenderer(Renderer renderer) {
   vkDestroyDevice(renderer->device, NULL);
   vkDestroySurfaceKHR(renderer->instance, renderer->surface, NULL);
   if (renderer->messenger != VK_NULL_HANDLE)

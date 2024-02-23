@@ -2,8 +2,7 @@
 
 #include <SDL3/SDL.h>
 
-struct Renderer;
+typedef struct Renderer_T *Renderer;
 
-bool rendererCreate(struct Renderer **renderer, bool validate,
-                    SDL_Window *window);
-void rendererDestroy(struct Renderer *renderer);
+bool createRenderer(Renderer *pRenderer, bool validate, SDL_Window *window);
+void destroyRenderer(Renderer renderer);
