@@ -25,16 +25,16 @@ static VkBool32 debugCallback(
 }
 
 static bool enumerateInstanceExtensionProperties(
-    uint32_t *pLen, VkExtensionProperties **ppProps, struct msc_arena *up) {
+    uint32_t *pLen, VkExtensionProperties **ppProps, struct msca *up) {
   bool ok = false;
   uint32_t len;
-  msc_arena_checkpoint_t cp = msc_arena_checkpoint(up);
+  msca_cp_t cp = msca_checkpoint(up);
   VkExtensionProperties *pProps;
   if (vkEnumerateInstanceExtensionProperties(NULL, &len, NULL)) {
     SDL_Log("Failed to enumerate count of instance extension properties");
     goto finally;
   }
-  pProps = msc_arena_alloc(up, alignof(*pProps), len, sizeof(*pProps));
+  pProps = msca_alloc(up, alignof(*pProps), len, sizeof(*pProps));
   if (!pProps) goto finally;
   if (vkEnumerateInstanceExtensionProperties(NULL, &len, pProps)) {
     SDL_Log("Failed to enumerate instance extension properties");
@@ -45,7 +45,7 @@ ok:
   *pLen = len;
   *ppProps = pProps;
 finally:
-  if (!ok) msc_arena_rewind(up, cp);
+  if (!ok) msca_rewind(up, cp);
   return ok;
 }
 
@@ -66,7 +66,7 @@ finally:
 }
 
 static bool getInstanceRequiredExtensions(bool validate, bool portability,
-                                          struct msc_arena *up,
+                                          struct msca *up,
                                           uint32_t *pExtensionCount,
                                           const char ***pppExtensions) {
   struct {
@@ -74,7 +74,7 @@ static bool getInstanceRequiredExtensions(bool validate, bool portability,
     const char **items;
   } result = {0};
   bool ok = false;
-  msc_arena_checkpoint_t cp = msc_arena_checkpoint(up);
+  msca_cp_t cp = msca_checkpoint(up);
   // Validation
   if (validate) result.len += 1;
   // SDL extensions
@@ -83,8 +83,8 @@ static bool getInstanceRequiredExtensions(bool validate, bool portability,
   result.len += sdlExtsCount;
   if (portability) result.len += 1;
   // Populate array
-  result.items = msc_arena_alloc(up, alignof(const char *), result.len,
-                                 sizeof(const char *));
+  result.items =
+      msca_alloc(up, alignof(const char *), result.len, sizeof(const char *));
   if (!result.items) goto finally;
   const char **it = result.items;
   if (validate) *(it++) = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
@@ -95,11 +95,11 @@ ok:
   *pExtensionCount = result.len;
   *pppExtensions = result.items;
 finally:
-  if (!ok) msc_arena_rewind(up, cp);
+  if (!ok) msca_rewind(up, cp);
   return ok;
 }
 
-static bool enumerateInstanceLayerProperties(struct msc_arena *up,
+static bool enumerateInstanceLayerProperties(struct msca *up,
                                              uint32_t *pItemCount,
                                              VkLayerProperties **ppItems) {
   struct {
@@ -107,13 +107,13 @@ static bool enumerateInstanceLayerProperties(struct msc_arena *up,
     VkLayerProperties *items;
   } result = {0};
   bool ok = false;
-  msc_arena_checkpoint_t cp = msc_arena_checkpoint(up);
+  msca_cp_t cp = msca_checkpoint(up);
   if (vkEnumerateInstanceLayerProperties(&result.len, NULL)) {
     SDL_Log("Failed to enumerate count of instance layer properties");
     goto finally;
   }
-  result.items = msc_arena_alloc(up, alignof(VkLayerProperties), result.len,
-                                 sizeof(VkLayerProperties));
+  result.items = msca_alloc(up, alignof(VkLayerProperties), result.len,
+                            sizeof(VkLayerProperties));
   if (!result.items) goto finally;
   if (vkEnumerateInstanceLayerProperties(&result.len, result.items)) {
     SDL_Log("Failed to enumerate instance layer properties");
@@ -124,7 +124,7 @@ ok:
   *pItemCount = result.len;
   *ppItems = result.items;
 finally:
-  if (!ok) msc_arena_rewind(up, cp);
+  if (!ok) msca_rewind(up, cp);
   return ok;
 }
 
@@ -146,14 +146,14 @@ static void findInstanceRequiredLayers(uint32_t propCount,
   }
 }
 
-bool getInstanceRequiredLayers(bool validate, struct msc_arena *up,
+bool getInstanceRequiredLayers(bool validate, struct msca *up,
                                uint32_t *pLayerCount, const char ***pppLayers) {
   struct {
     uint32_t len;
     const char **items;
   } result = {0};
   bool ok = false;
-  msc_arena_checkpoint_t cp = msc_arena_checkpoint(up);
+  msca_cp_t cp = msca_checkpoint(up);
   // Count extensions
   if (validate) ++result.len;
   struct {
@@ -166,8 +166,8 @@ bool getInstanceRequiredLayers(bool validate, struct msc_arena *up,
   findInstanceRequiredLayers(props.len, props.items, &instLayersCount, NULL);
   result.len += instLayersCount;
   // Populate extensions
-  result.items = msc_arena_alloc(up, alignof(const char *), result.len,
-                                 sizeof(const char *));
+  result.items =
+      msca_alloc(up, alignof(const char *), result.len, sizeof(const char *));
   if (!result.items) goto finally;
   const char **it = result.items;
   if (validate) *(it++) = "VK_LAYER_KHRONOS_validation";
@@ -178,12 +178,12 @@ ok:
   *pLayerCount = result.len;
   *pppLayers = result.items;
 finally:
-  if (!ok) msc_arena_rewind(up, cp);
+  if (!ok) msca_rewind(up, cp);
   return ok;
 }
 
 bool initInstance(struct Instance *pInstance, bool validate,
-                  struct msc_arena scratch) {
+                  struct msca scratch) {
   SDL_Log("Initializing Vulkan instance");
   bool ok = false;
   VkInstance instance = VK_NULL_HANDLE;

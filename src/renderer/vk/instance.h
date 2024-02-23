@@ -9,5 +9,5 @@ struct Instance {
 };
 
 bool initInstance(struct Instance *pInstance, bool validate,
-                  struct msc_arena scratch);
+                  struct msca scratch);
 void deinitInstance(struct Instance *pInstance);

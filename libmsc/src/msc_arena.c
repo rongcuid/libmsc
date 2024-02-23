@@ -4,13 +4,12 @@
 #include <stdint.h>
 #include <string.h>
 
-void msc_arena_init(struct msc_arena *arena, void *memory, size_t capacity) {
+void msca_init(struct msca *arena, void *memory, size_t capacity) {
   arena->begin = memory;
   arena->end = memory + capacity;
 }
 
-void *msc_arena_alloc(struct msc_arena *arena, size_t align, size_t len,
-                      size_t size) {
+void *msca_alloc(struct msca *arena, size_t align, size_t len, size_t size) {
   void *ptr = NULL;
   if (align == 0) goto exit_param;
   // If align is not power of two, error
@@ -30,13 +29,12 @@ exit_param:;
 finally:
   return ptr;
 }
-msc_arena_checkpoint_t msc_arena_checkpoint(const struct msc_arena *arena) {
-  return (msc_arena_checkpoint_t){
+msca_cp_t msca_checkpoint(const struct msca *arena) {
+  return (msca_cp_t){
       .begin = arena->begin,
   };
 }
 
-void msc_arena_rewind(struct msc_arena *arena,
-                      msc_arena_checkpoint_t checkpoint) {
+void msca_rewind(struct msca *arena, msca_cp_t checkpoint) {
   arena->begin = checkpoint.begin;
 }

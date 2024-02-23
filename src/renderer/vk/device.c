@@ -1,28 +1,31 @@
 #include "device.h"
 
-typedef struct {
-  VkPhysicalDevice *items;
-  uint32_t len;
-  bool ok;
-} PhysicalDevices;
-PhysicalDevices enumeratePhysicalDevices(VkInstance instance) {
-  PhysicalDevices result = {0};
-  if (vkEnumeratePhysicalDevices(instance, &result.len, NULL)) {
-    goto finally;
-  }
-  result.items = SDL_calloc(result.len, sizeof(VkPhysicalDevice));
+bool enumeratePhysicalDevices(VkInstance instance, struct msca *up,
+                              uint32_t *pPhysicalDeviceCount,
+                              VkPhysicalDevice **ppPhysicalDevices) {
+  struct {
+    uint32_t len;
+    VkPhysicalDevice *items;
+  } result = {0};
+  bool ok = false;
+  msca_cp_t cp = msca_checkpoint(up);
+  if (vkEnumeratePhysicalDevices(instance, &result.len, NULL)) goto finally;
+
+  result.items = msca_alloc(up, alignof(VkPhysicalDevice), result.len,
+                            sizeof(VkPhysicalDevice));
   if (!result.items) {
     goto finally;
   }
   if (vkEnumeratePhysicalDevices(instance, &result.len, result.items)) {
-    goto err_after_alloc;
+    goto finally;
   }
-  result.ok = true;
-  goto finally;
-err_after_alloc:
-  SDL_free(result.items);
+ok:
+  ok = true;
+  *pPhysicalDeviceCount = result.len;
+  *ppPhysicalDevices = result.items;
 finally:
-  return result;
+  if (!ok) msca_rewind(up, cp);
+  return ok;
 }
 
 static int deviceRank(VkPhysicalDevice phy) {
@@ -139,7 +142,7 @@ static void summarizeDevice(VkPhysicalDevice phy) {
 VkPhysicalDevice pickDevices(VkPhysicalDevice *pDevices, uint32_t len) {
   // mscalg_qsort(pDevices, len, sizeof(VkPhysicalDevice), &compareDevice,
   // NULL);
-  for (ptrdiff_t i = 0; i < len; ++i) {
+  for (uint32_t i = 0; i < len; ++i) {
     summarizeDevice(pDevices[i]);
     RequiredFeatures features;
     initRequiredFeatures(&features);
@@ -157,25 +160,28 @@ static bool qfiSupportsGraphics(const VkQueueFamilyProperties *prop) {
 
 static const float queuePriorities[1] = {1.0};
 
-typedef struct {
-  VkDeviceQueueCreateInfo items[2];
-  uint32_t len;
-  uint32_t graphicsQFI;
-  uint32_t presentQFI;
-  bool ok;
-} DeviceQCIs;
 /**
  * @brief Create one queue per family
  *
  * @param phy
  * @return DeviceQCIs
  */
-static DeviceQCIs getDeviceQCIs(VkPhysicalDevice phy, VkSurfaceKHR surface) {
-  DeviceQCIs result = {0};
+static bool getDeviceQCIs(VkPhysicalDevice phy, VkSurfaceKHR surface,
+                          struct msca *up, uint32_t *pQueueCICount,
+                          VkDeviceQueueCreateInfo **pQueueCIs,
+                          uint32_t *pGraphicsQCI, uint32_t *pPresentQFI) {
+  struct {
+    VkDeviceQueueCreateInfo *items;
+    uint32_t len;
+    uint32_t graphicsQFI;
+    uint32_t presentQFI;
+    bool ok;
+  } result = {0};
+  msca_cp_t cp = msca_checkpoint(up);
   uint32_t numQFIs;
   vkGetPhysicalDeviceQueueFamilyProperties(phy, &numQFIs, NULL);
   VkQueueFamilyProperties *props =
-      SDL_calloc(numQFIs, sizeof(VkQueueFamilyProperties));
+      msca_alloc(up, alignof(*props), numQFIs, sizeof(*props));
   vkGetPhysicalDeviceQueueFamilyProperties(phy, &numQFIs, props);
   bool foundGraphics = false, foundPresent = false;
   uint32_t graphicsQFI, presentQFI;
@@ -187,7 +193,7 @@ static DeviceQCIs getDeviceQCIs(VkPhysicalDevice phy, VkSurfaceKHR surface) {
     VkBool32 supportsPresent;
     if (vkGetPhysicalDeviceSurfaceSupportKHR(phy, i, surface,
                                              &supportsPresent)) {
-      goto clean_props;
+      goto finally;
     }
     if (!foundPresent && supportsPresent) {
       foundPresent = true;
@@ -195,18 +201,22 @@ static DeviceQCIs getDeviceQCIs(VkPhysicalDevice phy, VkSurfaceKHR surface) {
     }
   }
   if (!foundGraphics || !foundPresent) {
-    goto clean_props;
+    goto finally;
   }
+  if (graphicsQFI == presentQFI) {
+    result.len = 1;
+  } else {
+    result.len = 2;
+  }
+  result.items = msca_alloc(up, alignof(VkDeviceQueueCreateInfo), result.len,
+                            sizeof(VkDeviceQueueCreateInfo));
   result.items[0] = (VkDeviceQueueCreateInfo){
       .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
       .queueFamilyIndex = graphicsQFI,
       .queueCount = 1,
       .pQueuePriorities = queuePriorities,
   };
-  if (graphicsQFI == presentQFI) {
-    result.len = 1;
-  } else {
-    result.len = 2;
+  if (result.len == 2) {
     result.items[1] = (VkDeviceQueueCreateInfo){
         .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
         .queueFamilyIndex = presentQFI,
@@ -214,11 +224,15 @@ static DeviceQCIs getDeviceQCIs(VkPhysicalDevice phy, VkSurfaceKHR surface) {
         .pQueuePriorities = queuePriorities,
     };
   }
+ok:
   result.ok = true;
-clean_props:
-  SDL_free(props);
+  *pQueueCICount = result.len;
+  *pQueueCIs = result.items;
+  *pGraphicsQCI = result.graphicsQFI;
+  *pPresentQFI = result.presentQFI;
 finally:
-  return result;
+  if (!result.ok) msca_rewind(up, cp);
+  return result.ok;
 }
 
 static void fillRequiredExtensions(const VkExtensionProperties *props,
@@ -250,42 +264,49 @@ static void fillRequiredExtensions(const VkExtensionProperties *props,
   }
 }
 
-typedef struct {
-  const char **items;
-  uint32_t len;
-  bool ok;
-} DeviceExtensions;
-static DeviceExtensions getRequiredExtensions(VkPhysicalDevice phy) {
-  DeviceExtensions result = {0};
+static bool getRequiredExtensions(VkPhysicalDevice phy, struct msca *up,
+                                  uint32_t *extensionCount,
+                                  const char ***pppExtensions) {
+  struct {
+    const char **items;
+    uint32_t len;
+    bool ok;
+  } result = {0};
+  msca_cp_t cp = msca_checkpoint(up);
   uint32_t numProps;
   if (vkEnumerateDeviceExtensionProperties(phy, NULL, &numProps, NULL)) {
     goto finally;
   }
   VkExtensionProperties *props =
-      SDL_calloc(numProps, sizeof(VkExtensionProperties));
+      msca_alloc(up, alignof(VkExtensionProperties), numProps,
+                 sizeof(VkExtensionProperties));
   if (vkEnumerateDeviceExtensionProperties(phy, NULL, &numProps, props)) {
     goto finally;
   }
   fillRequiredExtensions(props, numProps, &result.len, NULL);
-  result.items = SDL_calloc(result.len, sizeof(const char *));
+  result.items =
+      msca_alloc(up, alignof(const char *), result.len, sizeof(const char *));
   fillRequiredExtensions(props, numProps, &result.len, result.items);
+ok:
   result.ok = true;
-clean_items:
-  if (!result.ok) SDL_free(result.items);
-clean_props:
-  SDL_free(props);
+  *extensionCount = result.len;
+  *pppExtensions = result.items;
 finally:
-  return result;
+  if (!result.ok) msca_rewind(up, cp);
+  return result.ok;
 }
 
 bool initDevice(struct Device *pDevice, VkInstance instance,
-                VkSurfaceKHR surface) {
+                VkSurfaceKHR surface, struct msca scratch) {
   SDL_Log("Initializing Vulkan device");
   bool ok = false;
   struct Device device = {0};
   //
-  PhysicalDevices pdevs = enumeratePhysicalDevices(instance);
-  if (!pdevs.ok) {
+  struct {
+    uint32_t len;
+    VkPhysicalDevice *items;
+  } pdevs;
+  if (!enumeratePhysicalDevices(instance, &scratch, &pdevs.len, &pdevs.items)) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                  "Failed to enumerate physical devices");
     goto finally;
@@ -293,17 +314,32 @@ bool initDevice(struct Device *pDevice, VkInstance instance,
   device.physical = pickDevices(pdevs.items, pdevs.len);
   if (device.physical == VK_NULL_HANDLE) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No suitable device");
-    goto clean_pdevs;
+    goto finally;
   }
   RequiredFeatures features;
   initRequiredFeatures(&features);
   setRequiredFeatures(&features);
-  DeviceQCIs qcis = getDeviceQCIs(device.physical, surface);
-  if (!qcis.ok) {
+  struct {
+    uint32_t len;
+    VkDeviceQueueCreateInfo *items;
+    uint32_t graphicsQFI;
+    uint32_t presentQFI;
+  } qcis;
+  if (!getDeviceQCIs(device.physical, surface, &scratch, &qcis.len, &qcis.items,
+                     &qcis.graphicsQFI, &qcis.presentQFI)) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No suitable queues");
-    goto clean_pdevs;
+    goto finally;
   }
-  DeviceExtensions exts = getRequiredExtensions(device.physical);
+  struct {
+    const char **items;
+    uint32_t len;
+  } exts;
+  if (!getRequiredExtensions(device.physical, &scratch, &exts.len,
+                             &exts.items)) {
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                 "Failed to get required device extensions");
+    goto finally;
+  }
   VkDeviceCreateInfo ci = {
       .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
       .pNext = &features.features2,
@@ -316,17 +352,13 @@ bool initDevice(struct Device *pDevice, VkInstance instance,
   };
   if (vkCreateDevice(device.physical, &ci, NULL, &device.device)) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create device");
-    goto clean_exts;
+    goto finally;
   }
   vkGetDeviceQueue(device.device, qcis.graphicsQFI, 0, &device.graphicsQueue);
   vkGetDeviceQueue(device.device, qcis.presentQFI, 0, &device.presentQueue);
 success:
   *pDevice = device;
   ok = true;
-clean_exts:
-  SDL_free(exts.items);
-clean_pdevs:
-  SDL_free(pdevs.items);
 finally:
   return ok;
 }

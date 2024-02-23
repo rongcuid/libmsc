@@ -1,5 +1,6 @@
 #pragma once
 
+#include <msc_arena.h>
 #include <volk.h>
 
 struct Device {
@@ -10,5 +11,5 @@ struct Device {
 };
 
 bool initDevice(struct Device *pDevice, VkInstance instance,
-                VkSurfaceKHR surface);
+                VkSurfaceKHR surface, struct msca scratch);
 void deinitDevice(struct Device *pDevice);

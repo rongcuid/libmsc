@@ -13,7 +13,7 @@
 
 struct Renderer_T {
   void *scratch_memory;
-  struct msc_arena scratch;
+  struct msca scratch;
   struct Instance instance;
   VkSurfaceKHR surface;
   struct Device device;
@@ -29,7 +29,7 @@ bool createRenderer(Renderer *pRenderer, bool validate, SDL_Window *window) {
   if (!renderer) goto finally;
   renderer->scratch_memory = SDL_malloc(SCRATCH_SIZE);
   if (!renderer->scratch_memory) goto clean_renderer;
-  msc_arena_init(&renderer->scratch, renderer->scratch_memory, SCRATCH_SIZE);
+  msca_init(&renderer->scratch, renderer->scratch_memory, SCRATCH_SIZE);
   if (!initInstance(&renderer->instance, validate, renderer->scratch))
     goto clean_scratch;
   if (!SDL_Vulkan_CreateSurface(window, renderer->instance.instance, NULL,
@@ -37,7 +37,7 @@ bool createRenderer(Renderer *pRenderer, bool validate, SDL_Window *window) {
     goto clean_instance;
   }
   if (!initDevice(&renderer->device, renderer->instance.instance,
-                  renderer->surface)) {
+                  renderer->surface, renderer->scratch)) {
     goto clean_surface;
   }
 ok:
