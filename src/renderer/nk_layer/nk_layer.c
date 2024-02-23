@@ -12,6 +12,7 @@ struct NkLayer_T {
 
 bool createNkLayer(NkLayer *pLayer, VkDevice device, VkPipelineCache cache,
                    VkFormat format, struct msca scratch) {
+  SDL_Log("Creating Nk layer");
   bool ok = false;
   NkLayer layer = SDL_malloc(sizeof(*layer));
   if (!layer) goto finally;
@@ -30,6 +31,7 @@ finally:
 }
 
 void destroyNkLayer(NkLayer layer) {
+  SDL_Log("Destroying Nk layer");
   deinitNkPipeline(&layer->pipeline);
   SDL_free(layer);
 }

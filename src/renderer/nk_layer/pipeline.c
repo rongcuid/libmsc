@@ -1,25 +1,13 @@
 #include "pipeline.h"
 
 // Note that this is always aligned to 4-byte
-typedef struct {
-  uint32_t size;
-  const char code[];
-} Spv;
 
 ////// Pipeline definitions
-static const Spv vertSpv = {
-    .size = sizeof(vertSpv) - sizeof(uint32_t),
-    .code =
-        {
+static const char vertSpv[] __attribute__((aligned(4))) = {
 #include "nk.vert.spv.h"
-        },
 };
-static const Spv fragSpv = {
-    .size = sizeof(fragSpv) - sizeof(uint32_t),
-    .code =
-        {
+static const char fragSpv[] __attribute__((aligned(4))) = {
 #include "nk.frag.spv.h"
-        },
 };
 
 static const VkPipelineVertexInputStateCreateInfo visCI = {
@@ -92,7 +80,7 @@ static const VkDescriptorSetLayoutBinding dsBindings0[] = {
     },
 };
 static const uint32_t dsBindings0Len =
-    sizeof(dsBindings0) / sizeof(VkDescriptorSetLayoutBinding);
+    sizeof(dsBindings0) / sizeof(*dsBindings0);
 static const uint32_t dslBinding0Flags[] = {
     VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
     VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT,
@@ -101,12 +89,12 @@ static const VkDescriptorSetLayoutBinding dsBindings1[] = {
     (VkDescriptorSetLayoutBinding){
         .binding = 0,
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-        .descriptorType = 1,
+        .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
     },
 };
 static const uint32_t dsBindings1Len =
-    sizeof(dsBindings1) / sizeof(VkDescriptorSetLayoutBinding);
+    sizeof(dsBindings1) / sizeof(*dsBindings1);
 
 ////// Descriptor set create infos
 static const VkDescriptorSetLayoutBindingFlagsCreateInfo dslbfCreateInfos[] = {
@@ -155,23 +143,23 @@ static bool createShaderStages(VkDevice device, struct msca *up,
   // Create stages
   VkShaderModuleCreateInfo vertCI = {
       .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-      .codeSize = vertSpv.size,
-      .pCode = (uint32_t *)vertSpv.code,
+      .codeSize = sizeof(vertSpv),
+      .pCode = (uint32_t *)vertSpv,
   };
   if (vkCreateShaderModule(device, &vertCI, NULL, &result.vertModule)) {
     goto finally;
   }
   VkShaderModuleCreateInfo fragCI = {
       .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-      .codeSize = fragSpv.size,
-      .pCode = (uint32_t *)fragSpv.code,
+      .codeSize = sizeof(fragSpv),
+      .pCode = (uint32_t *)fragSpv,
   };
   if (vkCreateShaderModule(device, &fragCI, NULL, &result.fragModule)) {
     goto clean_vert;
   }
   // Create stage create infos
-  result.stages =
-      msca_alloc(up, alignof(*result.stages), 2, alignof(*result.stages));
+  result.stages = msca_alloc(up, alignof(VkPipelineShaderStageCreateInfo), 2,
+                             alignof(VkPipelineShaderStageCreateInfo));
   if (!result.stages) goto clean_frag;
   result.stages[0] = (VkPipelineShaderStageCreateInfo){
       .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -181,7 +169,7 @@ static bool createShaderStages(VkDevice device, struct msca *up,
   };
   result.stages[1] = (VkPipelineShaderStageCreateInfo){
       .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-      .stage = VK_SHADER_STAGE_VERTEX_BIT,
+      .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
       .module = result.fragModule,
       .pName = "main",
   };
@@ -207,6 +195,7 @@ static bool createDescriptorSetLayouts(VkDevice device, uint32_t *pLayoutCount,
     bool ok;
   } result = {0};
   result.items = SDL_calloc(2, sizeof(VkDescriptorSetLayout));
+  result.len = 2;
   if (!result.items) goto finally;
   // Set 0
   if (vkCreateDescriptorSetLayout(device, &dslCreateInfos[0], NULL,

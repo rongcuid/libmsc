@@ -121,6 +121,7 @@ finally:
 void destroyRenderer(Renderer renderer) {
   SDL_Log("Destroying renderer");
   destroyNkLayer(renderer->nkLayer);
+  vkDestroyPipelineCache(renderer->device.device, renderer->cache, NULL);
   deinitDevice(&renderer->device);
   vkDestroySurfaceKHR(renderer->instance.instance, renderer->surface, NULL);
   deinitInstance(&renderer->instance);
