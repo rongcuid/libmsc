@@ -6,7 +6,7 @@
 
 struct NkLayer {
   VkPipelineCache cache;
-  NkPipeline pipeline;
+  struct NkPipeline pipeline;
   VkSurfaceKHR attachment;
 };
 

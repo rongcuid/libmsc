@@ -140,14 +140,18 @@ static const VkDescriptorSetLayoutCreateInfo dslCreateInfos[] = {
     },
 };
 
-typedef struct {
-  VkShaderModule vertModule;
-  VkShaderModule fragModule;
-  VkPipelineShaderStageCreateInfo stages[2];
-  bool ok;
-} ShaderStagesCreated;
-static ShaderStagesCreated createShaderStages(VkDevice device) {
-  ShaderStagesCreated result = {0};
+static bool createShaderStages(VkDevice device, struct msca *up,
+                               VkShaderModule *pVertModule,
+                               VkShaderModule *pFragModule,
+                               uint32_t *pStageCICount,
+                               VkPipelineShaderStageCreateInfo **ppStageCIs) {
+  struct {
+    VkShaderModule vertModule;
+    VkShaderModule fragModule;
+    VkPipelineShaderStageCreateInfo *stages;
+    bool ok;
+  } result = {0};
+  msca_cp_t cp = msca_checkpoint(up);
   // Create stages
   VkShaderModuleCreateInfo vertCI = {
       .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
@@ -166,6 +170,9 @@ static ShaderStagesCreated createShaderStages(VkDevice device) {
     goto clean_vert;
   }
   // Create stage create infos
+  result.stages =
+      msca_try_alloc(up, alignof(*result.stages), 2, alignof(*result.stages));
+  if (!result.stages) goto clean_frag;
   result.stages[0] = (VkPipelineShaderStageCreateInfo){
       .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
       .stage = VK_SHADER_STAGE_VERTEX_BIT,
@@ -179,22 +186,28 @@ static ShaderStagesCreated createShaderStages(VkDevice device) {
       .pName = "main",
   };
   result.ok = true;
+  *pVertModule = result.vertModule;
+  *pFragModule = result.fragModule;
+  *pStageCICount = 2;
+  *ppStageCIs = result.stages;
 clean_frag:
   if (!result.ok) vkDestroyShaderModule(device, result.fragModule, NULL);
 clean_vert:
   if (!result.ok) vkDestroyShaderModule(device, result.vertModule, NULL);
 finally:
-  return result;
+  if (!result.ok) msca_rewind(up, cp);
+  return result.ok;
 }
 
-typedef struct {
-  VkDescriptorSetLayout *items;
-  uint32_t len;
-  bool ok;
-} DSLayoutsCreated;
-static DSLayoutsCreated createDescriptorSetLayouts(VkDevice device) {
-  DSLayoutsCreated result = {0};
+static bool createDescriptorSetLayouts(VkDevice device, uint32_t *pLayoutCount,
+                                       VkDescriptorSetLayout **ppLayouts) {
+  struct {
+    VkDescriptorSetLayout *items;
+    uint32_t len;
+    bool ok;
+  } result = {0};
   result.items = SDL_calloc(2, sizeof(VkDescriptorSetLayout));
+  if (!result.items) goto finally;
   // Set 0
   if (vkCreateDescriptorSetLayout(device, &dslCreateInfos[0], NULL,
                                   &result.items[0])) {
@@ -206,6 +219,8 @@ static DSLayoutsCreated createDescriptorSetLayouts(VkDevice device) {
     goto clean_set0;
   }
   result.ok = true;
+  *pLayoutCount = result.len;
+  *ppLayouts = result.items;
 clean_set1:
   if (!result.ok) vkDestroyDescriptorSetLayout(device, result.items[1], NULL);
 clean_set0:
@@ -213,16 +228,17 @@ clean_set0:
 clean_items:
   if (!result.ok) SDL_free(result.items);
 finally:
-  return result;
+  return result.ok;
 }
 
-typedef struct {
-  VkPipelineLayout value;
-  bool ok;
-} PipelineLayoutCreated;
-static PipelineLayoutCreated createPipelineLayout(
-    VkDevice device, const VkDescriptorSetLayout *setLayouts, uint32_t setLen) {
-  PipelineLayoutCreated result = {0};
+static bool createPipelineLayout(VkDevice device,
+                                 const VkDescriptorSetLayout *setLayouts,
+                                 uint32_t setLen,
+                                 VkPipelineLayout *pPipelineLayout) {
+  struct {
+    VkPipelineLayout value;
+    bool ok;
+  } result = {0};
   VkPipelineLayoutCreateInfo ci = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
       .setLayoutCount = setLen,
@@ -232,30 +248,41 @@ static PipelineLayoutCreated createPipelineLayout(
     goto finally;
   }
   result.ok = true;
+  *pPipelineLayout = result.value;
 finally:
-  return result;
+  return result.ok;
 }
 
-NkPipelineCreated nkCreatePipeline(VkDevice device, VkPipelineCache cache,
-                                   VkFormat format) {
-  NkPipelineCreated result = {0};
-  ShaderStagesCreated stages = createShaderStages(device);
-  if (!stages.ok) goto finally;
+bool nkCreatePipeline(VkDevice device, VkPipelineCache cache, VkFormat format,
+                      struct msca scratch, struct NkPipeline *pPipeline) {
+  struct {
+    struct NkPipeline value;
+    bool ok;
+  } result = {0};
+  struct msca tmp;
+  msca_half(&scratch, &tmp);
+  struct {
+    VkShaderModule vertModule, fragModule;
+    uint32_t len;
+    VkPipelineShaderStageCreateInfo *stages;
+  } stages;
+  if (!createShaderStages(device, &tmp, &stages.vertModule, &stages.fragModule,
+                          &stages.len, &stages.stages))
+    goto finally;
   result.value.vert = stages.vertModule;
   result.value.frag = stages.fragModule;
-  DSLayoutsCreated dsLayouts = createDescriptorSetLayouts(device);
-  if (!dsLayouts.ok) goto clean_stages;
-  result.value.setLayouts.items = dsLayouts.items;
-  result.value.setLayouts.len = dsLayouts.len;
+  if (!createDescriptorSetLayouts(device, &result.value.setLayouts.len,
+                                  &result.value.setLayouts.items))
+    goto clean_stages;
   VkPipelineRenderingCreateInfoKHR rendering = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR,
       .colorAttachmentCount = 1,
       .pColorAttachmentFormats = &format,
   };
-  PipelineLayoutCreated layout =
-      createPipelineLayout(device, dsLayouts.items, dsLayouts.len);
-  if (!layout.ok) goto clean_dslayout;
-  result.value.layout = layout.value;
+
+  if (!createPipelineLayout(device, result.value.setLayouts.items,
+                            result.value.setLayouts.len, &result.value.layout))
+    goto clean_dslayout;
   VkGraphicsPipelineCreateInfo ci = {
       .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
       .pNext = &rendering,
@@ -270,24 +297,26 @@ NkPipelineCreated nkCreatePipeline(VkDevice device, VkPipelineCache cache,
       .pDepthStencilState = &dssCI,
       .pColorBlendState = &cbsCI,
       .pDynamicState = &dsCI,
-      .layout = layout.value,
+      .layout = result.value.layout,
   };
   if (!vkCreateGraphicsPipelines(device, cache, 1, &ci, NULL,
                                  &result.value.pipeline)) {
     goto clean_layout;
   }
   result.ok = true;
+  *pPipeline = result.value;
 clean_layout:
-  if (!result.ok) vkDestroyPipelineLayout(device, layout.value, NULL);
+  if (!result.ok) vkDestroyPipelineLayout(device, result.value.layout, NULL);
 clean_dslayout:
   if (!result.ok)
-    for (uint32_t i = 0; i < dsLayouts.len; ++i)
-      vkDestroyDescriptorSetLayout(device, dsLayouts.items[i], NULL);
+    for (uint32_t i = 0; i < result.value.setLayouts.len; ++i)
+      vkDestroyDescriptorSetLayout(device, result.value.setLayouts.items[i],
+                                   NULL);
 clean_stages:
   if (!result.ok) {
     vkDestroyShaderModule(device, stages.vertModule, NULL);
     vkDestroyShaderModule(device, stages.fragModule, NULL);
   }
 finally:
-  return result;
+  return result.ok;
 }

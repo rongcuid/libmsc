@@ -9,7 +9,8 @@ void msca_init(struct msca *arena, void *memory, size_t capacity) {
   arena->end = memory + capacity;
 }
 
-void *msca_alloc(struct msca *arena, size_t align, size_t len, size_t size) {
+void *msca_try_alloc(struct msca *arena, size_t align, size_t len,
+                     size_t size) {
   void *ptr = NULL;
   if (align == 0) goto exit_param;
   // If align is not power of two, error
@@ -37,4 +38,10 @@ msca_cp_t msca_checkpoint(const struct msca *arena) {
 
 void msca_rewind(struct msca *arena, msca_cp_t checkpoint) {
   arena->begin = checkpoint.begin;
+}
+
+void msca_half(struct msca *arena, struct msca *other) {
+  other->end = arena->end;
+  arena->end = arena->begin + (arena->end - arena->begin) / 2;
+  other->begin = arena->end;
 }

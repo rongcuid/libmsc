@@ -11,8 +11,8 @@ bool enumeratePhysicalDevices(VkInstance instance, struct msca *up,
   msca_cp_t cp = msca_checkpoint(up);
   if (vkEnumeratePhysicalDevices(instance, &result.len, NULL)) goto finally;
 
-  result.items = msca_alloc(up, alignof(VkPhysicalDevice), result.len,
-                            sizeof(VkPhysicalDevice));
+  result.items = msca_try_alloc(up, alignof(VkPhysicalDevice), result.len,
+                                sizeof(VkPhysicalDevice));
   if (!result.items) {
     goto finally;
   }
@@ -186,7 +186,7 @@ static bool getDeviceQCIs(VkPhysicalDevice phy, VkSurfaceKHR surface,
   uint32_t numQFIs;
   vkGetPhysicalDeviceQueueFamilyProperties(phy, &numQFIs, NULL);
   VkQueueFamilyProperties *props =
-      msca_alloc(up, alignof(*props), numQFIs, sizeof(*props));
+      msca_try_alloc(up, alignof(*props), numQFIs, sizeof(*props));
   vkGetPhysicalDeviceQueueFamilyProperties(phy, &numQFIs, props);
   bool foundGraphics = false, foundPresent = false;
   uint32_t graphicsQFI, presentQFI;
@@ -213,8 +213,8 @@ static bool getDeviceQCIs(VkPhysicalDevice phy, VkSurfaceKHR surface,
   } else {
     result.len = 2;
   }
-  result.items = msca_alloc(up, alignof(VkDeviceQueueCreateInfo), result.len,
-                            sizeof(VkDeviceQueueCreateInfo));
+  result.items = msca_try_alloc(up, alignof(VkDeviceQueueCreateInfo),
+                                result.len, sizeof(VkDeviceQueueCreateInfo));
   result.items[0] = (VkDeviceQueueCreateInfo){
       .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
       .queueFamilyIndex = graphicsQFI,
@@ -283,14 +283,14 @@ static bool getRequiredExtensions(VkPhysicalDevice phy, struct msca *up,
     goto finally;
   }
   VkExtensionProperties *props =
-      msca_alloc(up, alignof(VkExtensionProperties), numProps,
-                 sizeof(VkExtensionProperties));
+      msca_try_alloc(up, alignof(VkExtensionProperties), numProps,
+                     sizeof(VkExtensionProperties));
   if (vkEnumerateDeviceExtensionProperties(phy, NULL, &numProps, props)) {
     goto finally;
   }
   fillRequiredExtensions(props, numProps, &result.len, NULL);
-  result.items =
-      msca_alloc(up, alignof(const char *), result.len, sizeof(const char *));
+  result.items = msca_try_alloc(up, alignof(const char *), result.len,
+                                sizeof(const char *));
   fillRequiredExtensions(props, numProps, &result.len, result.items);
 ok:
   result.ok = true;

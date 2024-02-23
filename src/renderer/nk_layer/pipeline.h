@@ -1,21 +1,18 @@
 #pragma once
 
+#include <msc_arena.h>
 #include <volk.h>
 
-typedef struct {
+struct NkPipeline {
   VkPipeline pipeline;
   VkPipelineLayout layout;
   struct {
-    VkDescriptorSetLayout* items;
     uint32_t len;
+    VkDescriptorSetLayout* items;
   } setLayouts;
   VkShaderModule vert;
   VkShaderModule frag;
-} NkPipeline;
+};
 
-typedef struct {
-  NkPipeline value;
-  bool ok;
-} NkPipelineCreated;
-NkPipelineCreated nkCreatePipeline(VkDevice device, VkPipelineCache cache,
-                                   VkFormat format);
+bool nkCreatePipeline(VkDevice device, VkPipelineCache cache, VkFormat format,
+                      struct msca scratch, struct NkPipeline* pPipeline);
