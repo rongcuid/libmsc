@@ -28,7 +28,8 @@ void msca_init(struct msca *arena, void *memory, size_t capacity);
  * @param size Size of element
  * @return void* Pointer if success, NULL otherwise
  */
-void *msca_try_alloc(struct msca *arena, size_t align, size_t len, size_t size);
+void *msca_alloc(struct msca *arena, size_t align, size_t len, size_t size);
+
 /**
  * @brief Create a checkpoint
  *

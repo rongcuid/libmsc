@@ -171,7 +171,7 @@ static bool createShaderStages(VkDevice device, struct msca *up,
   }
   // Create stage create infos
   result.stages =
-      msca_try_alloc(up, alignof(*result.stages), 2, alignof(*result.stages));
+      msca_alloc(up, alignof(*result.stages), 2, alignof(*result.stages));
   if (!result.stages) goto clean_frag;
   result.stages[0] = (VkPipelineShaderStageCreateInfo){
       .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,

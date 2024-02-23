@@ -34,7 +34,7 @@ static bool enumerateInstanceExtensionProperties(
     SDL_Log("Failed to enumerate count of instance extension properties");
     goto finally;
   }
-  pProps = msca_try_alloc(up, alignof(*pProps), len, sizeof(*pProps));
+  pProps = msca_alloc(up, alignof(*pProps), len, sizeof(*pProps));
   if (!pProps) goto finally;
   if (vkEnumerateInstanceExtensionProperties(NULL, &len, pProps)) {
     SDL_Log("Failed to enumerate instance extension properties");
@@ -83,8 +83,8 @@ static bool getInstanceRequiredExtensions(bool validate, bool portability,
   result.len += sdlExtsCount;
   if (portability) result.len += 1;
   // Populate array
-  result.items = msca_try_alloc(up, alignof(const char *), result.len,
-                                sizeof(const char *));
+  result.items =
+      msca_alloc(up, alignof(const char *), result.len, sizeof(const char *));
   if (!result.items) goto finally;
   const char **it = result.items;
   if (validate) *(it++) = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
@@ -112,8 +112,8 @@ static bool enumerateInstanceLayerProperties(struct msca *up,
     SDL_Log("Failed to enumerate count of instance layer properties");
     goto finally;
   }
-  result.items = msca_try_alloc(up, alignof(VkLayerProperties), result.len,
-                                sizeof(VkLayerProperties));
+  result.items = msca_alloc(up, alignof(VkLayerProperties), result.len,
+                            sizeof(VkLayerProperties));
   if (!result.items) goto finally;
   if (vkEnumerateInstanceLayerProperties(&result.len, result.items)) {
     SDL_Log("Failed to enumerate instance layer properties");
@@ -166,8 +166,8 @@ bool getInstanceRequiredLayers(bool validate, struct msca *up,
   findInstanceRequiredLayers(props.len, props.items, &instLayersCount, NULL);
   result.len += instLayersCount;
   // Populate extensions
-  result.items = msca_try_alloc(up, alignof(const char *), result.len,
-                                sizeof(const char *));
+  result.items =
+      msca_alloc(up, alignof(const char *), result.len, sizeof(const char *));
   if (!result.items) goto finally;
   const char **it = result.items;
   if (validate) *(it++) = "VK_LAYER_KHRONOS_validation";

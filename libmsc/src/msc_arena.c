@@ -9,8 +9,7 @@ void msca_init(struct msca *arena, void *memory, size_t capacity) {
   arena->end = memory + capacity;
 }
 
-void *msca_try_alloc(struct msca *arena, size_t align, size_t len,
-                     size_t size) {
+void *msca_alloc(struct msca *arena, size_t align, size_t len, size_t size) {
   void *ptr = NULL;
   if (align == 0) goto exit_param;
   // If align is not power of two, error
