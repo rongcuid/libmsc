@@ -75,7 +75,7 @@ static const VkDescriptorSetLayoutBinding dsBindings0[] = {
     {
         .binding = 0,
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .descriptorCount = 32,
+        .descriptorCount = 16,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
     },
 };
