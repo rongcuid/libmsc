@@ -245,6 +245,7 @@ finally:
 bool initNkPipeline(struct NkPipeline *pipeline, VkDevice device,
                     VkPipelineCache cache, VkFormat format,
                     struct msca scratch) {
+  SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Initializing nk pipeline");
   struct {
     struct NkPipeline value;
     bool ok;
@@ -253,6 +254,7 @@ bool initNkPipeline(struct NkPipeline *pipeline, VkDevice device,
   msca_half(&scratch, &tmp);
   result.value.device = device;
   result.value.format = format;
+  SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Creating shaders");
   struct {
     VkShaderModule vertModule, fragModule;
     uint32_t len;
@@ -263,6 +265,7 @@ bool initNkPipeline(struct NkPipeline *pipeline, VkDevice device,
     goto finally;
   result.value.vert = stages.vertModule;
   result.value.frag = stages.fragModule;
+  SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Creating descriptor set layouts");
   if (!createDescriptorSetLayouts(device, &result.value.setLayouts.len,
                                   &result.value.setLayouts.items))
     goto clean_stages;
@@ -271,10 +274,11 @@ bool initNkPipeline(struct NkPipeline *pipeline, VkDevice device,
       .colorAttachmentCount = 1,
       .pColorAttachmentFormats = &format,
   };
-
+  SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Creating pipeline layout");
   if (!createPipelineLayout(device, result.value.setLayouts.items,
                             result.value.setLayouts.len, &result.value.layout))
     goto clean_dslayout;
+  SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Creating pipeline");
   VkGraphicsPipelineCreateInfo ci = {
       .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
       .pNext = &rendering,
@@ -291,8 +295,9 @@ bool initNkPipeline(struct NkPipeline *pipeline, VkDevice device,
       .pDynamicState = &dsCI,
       .layout = result.value.layout,
   };
-  if (!vkCreateGraphicsPipelines(device, cache, 1, &ci, NULL,
-                                 &result.value.pipeline)) {
+  if (vkCreateGraphicsPipelines(device, cache, 1, &ci, NULL,
+                                &result.value.pipeline) != VK_SUCCESS) {
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create pipeline");
     goto clean_layout;
   }
   result.ok = true;

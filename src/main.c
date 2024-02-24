@@ -19,6 +19,7 @@ int main(int argc, char **argv) {
                     SDL_GetError());
     return 1;
   }
+  // SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_DEBUG);
   VkResult res;
   if ((res = volkInitialize()) != VK_SUCCESS) {
     SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "Volk Init error: %d\n", res);
