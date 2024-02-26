@@ -325,6 +325,7 @@ void deinitNkPipeline(struct NkPipeline *pipeline) {
     vkDestroyDescriptorSetLayout(pipeline->device,
                                  pipeline->setLayouts.items[i], NULL);
   }
+  SDL_free(pipeline->setLayouts.items);
   vkDestroyShaderModule(pipeline->device, pipeline->vert, NULL);
   vkDestroyShaderModule(pipeline->device, pipeline->frag, NULL);
 }
