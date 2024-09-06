@@ -1,21 +1,15 @@
-add_rules("mode.debug", "mode.release")
+set_project("libmsc")
+set_xmakever("2.8.2")
+set_version("0.0.1", {build = "%Y%m%d", soname = true})
+
+set_warnings("all", "error")
 
 set_languages("c17")
 
-add_requires("unity_test ^2")
+if is_plat("wasm") then
+    add_requires("emscripten")
+    set_toolchains("emcc@emscripten")
+end
 
-target("test-mscarr")
-    set_default(false)
-    set_kind("binary")
-    add_files("tests/msc_arr/*.c")
-    add_tests("default")
-    add_includedirs("src")
-    add_packages("unity_test")
+add_rules("mode.release", "mode.debug", "mode.profile", "mode.coverage", "mode.valgrind", "mode.asan", "mode.tsan", "mode.ubsan")
 
-target("test-mscrng")
-    set_default(false)
-    set_kind("binary")
-    add_files("tests/msc_rng/*.c")
-    add_tests("default")
-    add_includedirs("src")
-    add_packages("unity_test")
