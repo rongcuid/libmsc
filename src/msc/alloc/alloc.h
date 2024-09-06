@@ -18,4 +18,4 @@ struct msc_allocator {
 
 extern const struct msc_allocator msc_c_allocator;
 
-#endif // MSC_ALLOC_H_
+#endif  // MSC_ALLOC_H_

@@ -4,4 +4,4 @@
 #include "alloc/alloc.h"
 #include "alloc/arena.h"
 
-#endif // MSC_H_
+#endif  // MSC_H_

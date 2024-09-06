@@ -16,3 +16,4 @@ add_rules("mode.release", "mode.debug", "mode.profile", "mode.coverage", "mode.v
 target("msc")
     set_kind("static")
     add_files("src/msc/**/*.c")
+    add_includedirs("src/msc")

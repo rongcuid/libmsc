@@ -21,4 +21,4 @@ void *msc_arena_realloc(struct msc_arena *self, void *ptr, ptrdiff_t old_size,
 void msc_arena_to_allocator(struct msc_arena *self,
                             struct msc_allocator *alloc);
 
-#endif // MSC_ARENA_H_
+#endif  // MSC_ARENA_H_
