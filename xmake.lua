@@ -13,3 +13,6 @@ end
 
 add_rules("mode.release", "mode.debug", "mode.profile", "mode.coverage", "mode.valgrind", "mode.asan", "mode.tsan", "mode.ubsan")
 
+target("msc")
+    set_kind("static")
+    add_files("src/msc/**/*.c")
