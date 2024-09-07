@@ -22,9 +22,13 @@ struct msc_arr {
 
 void msc_arr_init(struct msc_arr *self, ptrdiff_t elem_size,
                   ptrdiff_t elem_align, struct msc_allocator *alloc);
+
 enum msc_arr_e msc_arr_init_with_cap(struct msc_arr *self, ptrdiff_t elem_size,
                                      ptrdiff_t elem_align, ptrdiff_t capacity,
                                      struct msc_allocator *alloc);
 void msc_arr_deinit(struct msc_arr *self);
+
+enum msc_arr_e msc_arr_push(struct msc_arr *self, void *item);
+enum msc_arr_e msc_arr_pop(struct msc_arr *self, void *item);
 
 #endif  // MSC_DS_ARR_H_
