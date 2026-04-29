@@ -8,3 +8,6 @@ build/
 compile_commands.json
 .cache/
 .vscode/
+
+MODULE.bazel.lock
+bazel-*/

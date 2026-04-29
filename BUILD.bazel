@@ -1,7 +1,6 @@
-load("//tools/cc:defs.bzl", "c23_binary", "c23_library")
-
-c23_library(
+cc_library(
     name = "mscc",
+    copts = ["-std=c23"],
     srcs = [
         "src/alloc.c",
         "src/arena.c",
@@ -25,8 +24,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
-c23_binary(
+cc_binary(
     name = "mscc_shared",
+    copts = ["-std=c23"],
     linkshared = True,
     linkstatic = True,
     visibility = ["//visibility:public"],
