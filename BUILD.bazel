@@ -1,6 +1,5 @@
 cc_library(
     name = "mscc",
-    copts = ["-std=c23"],
     srcs = [
         "src/alloc.c",
         "src/arena.c",
@@ -10,9 +9,10 @@ cc_library(
         "src/alloc.h",
         "src/arena.h",
         "src/error.h",
-        "src/mscc.h",
+        "src/msc.h",
         "src/text.h",
     ],
+    copts = ["-std=c23"],
     strip_include_prefix = "src",
     visibility = ["//visibility:public"],
 )

@@ -1,5 +1,5 @@
-#ifndef MSCC_ALLOC_H_
-#define MSCC_ALLOC_H_
+#ifndef MSC_ALLOC_H_
+#define MSC_ALLOC_H_
 
 #include <stddef.h>
 
@@ -14,7 +14,7 @@
  * @param align Alignment requirement of object.
  * @return Pointer to reallocated object, or nullptr if failed.
  */
-typedef void *(*mscc_malloc_pfn)(void *context, ptrdiff_t size,
+typedef void* (*mscc_malloc_pfn)(void* context, ptrdiff_t size,
                                  ptrdiff_t align);
 /**
  * @brief A function pointer to `realloc` operator for an allocator.
@@ -30,7 +30,7 @@ typedef void *(*mscc_malloc_pfn)(void *context, ptrdiff_t size,
  * @param new_align Alignment of new object.
  * @return Pointer to reallocated object, or nullptr if failed.
  */
-typedef void *(*mscc_realloc_pfn)(void *context, void *ptr, ptrdiff_t old_size,
+typedef void* (*mscc_realloc_pfn)(void* context, void* ptr, ptrdiff_t old_size,
                                   ptrdiff_t old_align, ptrdiff_t new_size,
                                   ptrdiff_t new_align);
 
@@ -45,11 +45,11 @@ typedef void *(*mscc_realloc_pfn)(void *context, void *ptr, ptrdiff_t old_size,
  * @param size Size of object.
  * @param align Alignment of object.
  */
-typedef void (*mscc_free_pfn)(void *context, void *ptr, ptrdiff_t size,
+typedef void (*mscc_free_pfn)(void* context, void* ptr, ptrdiff_t size,
                               ptrdiff_t align);
 
 typedef struct {
-  void *context;
+  void* context;
   mscc_malloc_pfn malloc;
   mscc_realloc_pfn realloc;
   mscc_free_pfn free;
@@ -60,12 +60,12 @@ typedef struct {
  */
 extern const mscc_allocator_t mscc_c_allocator;
 
-void *mscc_malloc(const mscc_allocator_t *alloc, ptrdiff_t size,
+void* mscc_malloc(const mscc_allocator_t* alloc, ptrdiff_t size,
                   ptrdiff_t align);
-void *mscc_realloc(const mscc_allocator_t *alloc, void *ptr, ptrdiff_t old_size,
+void* mscc_realloc(const mscc_allocator_t* alloc, void* ptr, ptrdiff_t old_size,
                    ptrdiff_t old_align, ptrdiff_t new_size,
                    ptrdiff_t new_align);
-void mscc_free(const mscc_allocator_t *alloc, void *ptr, ptrdiff_t size,
+void mscc_free(const mscc_allocator_t* alloc, void* ptr, ptrdiff_t size,
                ptrdiff_t align);
 
 #endif
