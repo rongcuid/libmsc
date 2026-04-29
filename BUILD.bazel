@@ -1,0 +1,33 @@
+load("//tools/cc:defs.bzl", "c23_binary", "c23_library")
+
+c23_library(
+    name = "mscc",
+    srcs = [
+        "alloc.c",
+        "arena.c",
+        "text.c",
+    ],
+    hdrs = [
+        "alloc.h",
+        "arena.h",
+        "error.h",
+        "mscc.h",
+        "text.h",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "mscc_static",
+    srcs = [":mscc"],
+    output_group = "archive",
+    visibility = ["//visibility:public"],
+)
+
+c23_binary(
+    name = "mscc_shared",
+    linkshared = True,
+    linkstatic = True,
+    visibility = ["//visibility:public"],
+    deps = [":mscc"],
+)
