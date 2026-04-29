@@ -3,17 +3,18 @@ load("//tools/cc:defs.bzl", "c23_binary", "c23_library")
 c23_library(
     name = "mscc",
     srcs = [
-        "alloc.c",
-        "arena.c",
-        "text.c",
+        "src/alloc.c",
+        "src/arena.c",
+        "src/text.c",
     ],
     hdrs = [
-        "alloc.h",
-        "arena.h",
-        "error.h",
-        "mscc.h",
-        "text.h",
+        "src/alloc.h",
+        "src/arena.h",
+        "src/error.h",
+        "src/mscc.h",
+        "src/text.h",
     ],
+    strip_include_prefix = "src",
     visibility = ["//visibility:public"],
 )
 
