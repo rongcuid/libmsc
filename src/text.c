@@ -34,7 +34,8 @@ mscc_err_t mscc_text_from_c_str_n(const char* str, mscc_text_t* o_text,
     err = MSC_BADARGS;
     goto err_args;
   }
-  ptrdiff_t len = (ptrdiff_t)strnlen(str, (size_t)maxlen);
+  const char* end = memchr(str, '\0', (size_t)maxlen);
+  ptrdiff_t len = end - str;
   char* data = mscc_malloc(alloc, len, 1);
   if (!data) {
     err = MSC_NOMEM;
