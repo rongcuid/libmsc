@@ -8,6 +8,6 @@ typedef enum : uint32_t {
   MSC_ERR = 1,
   MSC_NOMEM,
   MSC_BADARGS,
-} mscc_err_t;
+} msc_err_t;
 
 #endif

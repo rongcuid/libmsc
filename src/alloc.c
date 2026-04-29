@@ -2,13 +2,13 @@
 
 #include <stdlib.h>
 
-#define CHECK(pred)                                                            \
-  if (!(pred)) {                                                               \
-    return nullptr;                                                            \
+#define CHECK(pred) \
+  if (!(pred)) {    \
+    return nullptr; \
   }
 
-void *mscc_malloc(const mscc_allocator_t *alloc, ptrdiff_t size,
-                  ptrdiff_t align) {
+void* msc_malloc(const msc_allocator_t* alloc, ptrdiff_t size,
+                 ptrdiff_t align) {
   CHECK(alloc != nullptr);
   CHECK(alloc->malloc != nullptr);
   CHECK(size >= 0);
@@ -16,9 +16,9 @@ void *mscc_malloc(const mscc_allocator_t *alloc, ptrdiff_t size,
   return alloc->malloc(alloc->context, size, align);
 }
 
-void *mscc_realloc(const mscc_allocator_t *alloc, void *ptr, ptrdiff_t old_size,
-                   ptrdiff_t old_align, ptrdiff_t new_size,
-                   ptrdiff_t new_align) {
+void* msc_realloc(const msc_allocator_t* alloc, void* ptr, ptrdiff_t old_size,
+                  ptrdiff_t old_align, ptrdiff_t new_size,
+                  ptrdiff_t new_align) {
   CHECK(alloc != nullptr);
   CHECK(alloc->realloc != nullptr);
   CHECK(old_size >= 0);
@@ -29,8 +29,8 @@ void *mscc_realloc(const mscc_allocator_t *alloc, void *ptr, ptrdiff_t old_size,
                         new_align);
 }
 
-void mscc_free(const mscc_allocator_t *alloc, void *ptr, ptrdiff_t size,
-               ptrdiff_t align) {
+void msc_free(const msc_allocator_t* alloc, void* ptr, ptrdiff_t size,
+              ptrdiff_t align) {
   if (alloc && alloc->free) {
     alloc->free(alloc->context, ptr, size, align);
   }
@@ -38,13 +38,13 @@ void mscc_free(const mscc_allocator_t *alloc, void *ptr, ptrdiff_t size,
 
 #undef CHECK
 
-static void *c_malloc(void *context, ptrdiff_t size, ptrdiff_t align) {
+static void* c_malloc(void* context, ptrdiff_t size, ptrdiff_t align) {
   (void)context;
   (void)align;
   return malloc(size);
 }
 
-static void *c_realloc(void *context, void *ptr, ptrdiff_t old_size,
+static void* c_realloc(void* context, void* ptr, ptrdiff_t old_size,
                        ptrdiff_t old_align, ptrdiff_t new_size,
                        ptrdiff_t new_align) {
   (void)context;
@@ -54,14 +54,14 @@ static void *c_realloc(void *context, void *ptr, ptrdiff_t old_size,
   return realloc(ptr, new_size);
 }
 
-static void c_free(void *context, void *ptr, ptrdiff_t size, ptrdiff_t align) {
+static void c_free(void* context, void* ptr, ptrdiff_t size, ptrdiff_t align) {
   (void)context;
   (void)size;
   (void)align;
   free(ptr);
 }
 
-const mscc_allocator_t mscc_c_allocator = {
+const msc_allocator_t msc_c_allocator = {
     .malloc = &c_malloc,
     .realloc = &c_realloc,
     .free = &c_free,

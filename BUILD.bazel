@@ -20,14 +20,14 @@ cc_library(
 )
 
 filegroup(
-    name = "mscc_static",
+    name = "msc_static",
     srcs = [":mscc"],
     output_group = "archive",
     visibility = ["//visibility:public"],
 )
 
 cc_binary(
-    name = "mscc_shared",
+    name = "msc_shared",
     copts = ["-std=c23"],
     linkshared = True,
     linkstatic = True,

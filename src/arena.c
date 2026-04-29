@@ -4,16 +4,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-mscc_arena_t mscc_arena_from_buf(void *buf, ptrdiff_t capacity) {
-  mscc_arena_t a = {0};
+msc_arena_t msc_arena_from_buf(void* buf, ptrdiff_t capacity) {
+  msc_arena_t a = {0};
   a.begin = buf;
   a.end = a.begin + capacity;
   return a;
 }
 
-mscc_arena_t mscc_arena_suballoc_unchecked(mscc_arena_t *a,
-                                           ptrdiff_t capacity) {
-  return mscc_arena_from_buf(mscc_arena_malloc(a, capacity, 1), capacity);
+msc_arena_t msc_arena_suballoc_unchecked(msc_arena_t* a, ptrdiff_t capacity) {
+  return msc_arena_from_buf(msc_arena_malloc(a, capacity, 1), capacity);
 }
 
 /**
@@ -22,7 +21,7 @@ mscc_arena_t mscc_arena_suballoc_unchecked(mscc_arena_t *a,
     * https://nullprogram.com/blog/2023/12/17/
     Modified.
  */
-void *mscc_arena_malloc(mscc_arena_t *a, ptrdiff_t size, ptrdiff_t align) {
+void* msc_arena_malloc(msc_arena_t* a, ptrdiff_t size, ptrdiff_t align) {
   // This arena allocator allocates from the end.
   ptrdiff_t available = a->end - a->begin;
   ptrdiff_t padding = -size & (align - 1);
@@ -38,8 +37,8 @@ void *mscc_arena_malloc(mscc_arena_t *a, ptrdiff_t size, ptrdiff_t align) {
     * https://nullprogram.com/blog/2023/12/17/
     Modified.
  */
-void mscc_arena_free(mscc_arena_t *a, void *ptr, ptrdiff_t size,
-                     ptrdiff_t align) {
+void msc_arena_free(msc_arena_t* a, void* ptr, ptrdiff_t size,
+                    ptrdiff_t align) {
   // Only the last object reclaims memory when freed.
   if (ptr == a->end) {
     ptrdiff_t padding = -size & (align - 1);
@@ -47,9 +46,9 @@ void mscc_arena_free(mscc_arena_t *a, void *ptr, ptrdiff_t size,
   }
 }
 
-void *mscc_arena_realloc(mscc_arena_t *a, void *ptr, ptrdiff_t old_size,
-                         ptrdiff_t old_align, ptrdiff_t new_size,
-                         ptrdiff_t new_align) {
+void* msc_arena_realloc(msc_arena_t* a, void* ptr, ptrdiff_t old_size,
+                        ptrdiff_t old_align, ptrdiff_t new_size,
+                        ptrdiff_t new_align) {
   if (new_size < old_size) {
     return NULL;
   }
@@ -57,11 +56,11 @@ void *mscc_arena_realloc(mscc_arena_t *a, void *ptr, ptrdiff_t old_size,
   // the end pointer), reclaim space.
   if (ptr == a->end) {
     ptrdiff_t old_padding = -old_size & (old_align - 1);
-    char *old_end = a->end;
+    char* old_end = a->end;
 
     a->end += old_size + old_padding;
 
-    void *r = mscc_arena_malloc(a, new_size, new_align);
+    void* r = msc_arena_malloc(a, new_size, new_align);
     if (r == NULL) {
       a->end = old_end;
       return NULL;
@@ -69,7 +68,7 @@ void *mscc_arena_realloc(mscc_arena_t *a, void *ptr, ptrdiff_t old_size,
     return memmove(r, ptr, old_size);
   }
 
-  void *r = mscc_arena_malloc(a, new_size, new_align);
+  void* r = msc_arena_malloc(a, new_size, new_align);
   if (r == NULL) {
     return NULL;
   }

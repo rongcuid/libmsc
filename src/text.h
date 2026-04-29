@@ -9,16 +9,15 @@
 typedef struct {
   ptrdiff_t len;
   char* data;
-} mscc_text_t;
+} msc_text_t;
 
-mscc_err_t mscc_text_from_c_str(const char* str, mscc_text_t* o_text,
-                                const mscc_allocator_t* alloc);
+msc_err_t msc_text_from_c_str(const char* str, msc_text_t* o_text,
+                              const msc_allocator_t* alloc);
 
-mscc_err_t mscc_text_from_c_str_n(const char* str, mscc_text_t* o_text,
-                                  ptrdiff_t maxlen,
-                                  const mscc_allocator_t* alloc);
+msc_err_t msc_text_from_c_str_n(const char* str, msc_text_t* o_text,
+                                ptrdiff_t maxlen, const msc_allocator_t* alloc);
 
-mscc_err_t mscc_text_to_c_str(mscc_text_t text, char** o_str,
-                              const mscc_allocator_t* alloc);
+msc_err_t msc_text_to_c_str(msc_text_t text, char** o_str,
+                            const msc_allocator_t* alloc);
 
 #endif
